@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Hotwire Wing 3D Preview</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="css/style.css">
+<script src="js/react.development.js"></script>
+<script src="js/react-dom.development.js"></script>
+<script src="js/babel.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.124.0/build/three.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.124.0/examples/js/controls/OrbitControls.js"></script>
+<style>
+  body { font-family: sans-serif; padding: 12px; margin:0; overflow:hidden; }
+  label { display:block; margin:6px 0; }
+  input { margin-top:2px; }
+  #canvas-container { width:100%; height:600px; border:1px solid #ccc; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+function HotwireWing3D() {
+
+  // Wing
+  const [innerDAT, setInnerDAT] = useState("");
+  const [innerName, setInnerName] = useState("clarky.dat");
+  const [innerColor, setInnerColor] = useState("#ff0000"); // Rot default
+  const [innerScale, setInnerScale] = useState(100); // mm Länge
+  const [thicknessScaleInner, setThicknessScaleInner] = useState(1.0);
+  const [rotationInner, setRotationInner] = useState(0); // in rad
+
+  const [outerDAT, setOuterDAT] = useState("");
+  const [outerName, setOuterName] = useState("clarky.dat");
+  const [outerColor, setOuterColor] = useState("#0000ff"); // Blau default
+  const [outerScale, setOuterScale] = useState(120); // mm Länge
+  const [thicknessScaleOuter, setThicknessScaleOuter] = useState(1.0);
+  const [rotationOuter, setRotationOuter] = useState(0); // in rad
+  /*const [outerOffsetY, setOuterOffsetY] = useState(0); // nach oben/unten
+  const [outerOffsetZ, setOuterOffsetZ] = useState(0); // nach hinten/vorne*/
+  const [outerVerticalOffset, setOuterVerticalOffset] = useState(0); // nach oben/unten
+  const [outerChordOffset, setOuterChordOffset] = useState(0);       // nach vorne/hinten
+
+  //Allgemeine Flaechenparameter
+  const [span, setSpan] = useState(500);
+  const [profilePointsCount, setProfilePointsCount] = useState(300); // default 300 Punkte
+  
+  // Initial default hole nur einmal
+  const [holes, setHoles] = useState([{ diameter: 5, xPercent: 0.5, yPercent: 0.5, nPoints: 30 }]);
+  // Jedes Loch ist ein Objekt: {diameter, xPercent, yPercent}
+  const [ailerons, setAilerons] = useState([{thicknessTop: 2, xPercent: 0.7, frontAngleDeg: 15, rearAngleDeg: 15}]);
+  // Cut: {Restdicke oben in mm,Position von hinten in % ,V-Winkel des Cuts}
+
+  //Page
+  const [activeTab, setActiveTab] = useState(null);
+
+  //debug
+  const [debugOpen, setDebugOpen] = useState(false);
+  const [debugPoints, setDebugPoints] = useState({ inner: [], outer: [] });
+
+  //Camera
+
+  const [cameraPos, setCameraPos] = useState({x:0,y:0,z:0});
+  const [cameraTarget, setCameraTarget] = useState({x:0,y:0,z:0});
+
+  const canvasRef = useRef(null);
+  const raycasterRef = useRef(new THREE.Raycaster());
+  const mouseRef = useRef(new THREE.Vector2());
+  const tooltipRef = useRef(null);
+  const markerRef = useRef(null);  // der Marker für den aktuell gewählten Punkt
+
+  const controlsRef = useRef(null);
+  const cameraPosRef = useRef({x:0,y:0,z:0});
+  const cameraTargetRef = useRef({x:0,y:0,z:0});
+  const sceneRef = useRef();
+  const cameraRef = useRef();
+  const rendererRef = useRef();
+
+  // --- Laden Default DAT ---
+  useEffect(() => {
+    fetch('airfoil/clarky.dat')
+      .then(res => res.text())
+      .then(text => {
+        setInnerDAT(text);
+        setOuterDAT(text);
+        setInnerName("clarky.dat");
+        setOuterName("clarky.dat");
+      })
+      .catch(err => console.log("Default DAT konnte nicht geladen werden", err));
+  }, []);
+
+  // Holt alle 200ms die Kameraposition aus den Refs und aktualisiert die Anzeige
+  useEffect(() => {
+    const iv = setInterval(() => {
+      setCameraPos({...cameraPosRef.current});
+      setCameraTarget({...cameraTargetRef.current});
+    }, 200);
+    return () => clearInterval(iv);
+  }, []);
+
+  // --- 3D Grundsetup: Szene, Kamera, Renderer, OrbitControls (einmalig beim Laden) ---
+  useEffect(() => {
+    if (!canvasRef.current) return;
+
+    const width = canvasRef.current.clientWidth;
+    const height = canvasRef.current.clientHeight;
+
+    // Szene
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xf0f0f0); // weißer Hintergrund
+    sceneRef.current = scene;
+
+    // Kamera
+    const camera = new THREE.PerspectiveCamera(45, width / height, 1, 10000);
+    cameraRef.current = camera;
+
+    camera.position.set(600, -span/2, span);
+    camera.up.set(0,0,1);      // Z nach oben
+    camera.lookAt(0,0,0);      // Zentrum der Szene
+
+    cameraRef.current = camera;
+
+    // Renderer
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(width, height);
+    canvasRef.current.innerHTML = "";
+    canvasRef.current.appendChild(renderer.domElement);
+    rendererRef.current = renderer;
+
+    // OrbitControls (flüssige Bewegung + Zoom)
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controlsRef.current = controls;
+
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.1;
+    controls.enableZoom = true;
+    controls.enablePan = true;
+    controls.target.set(0,0,0);
+    controlsRef.current = controls;
+
+    // Achsenhilfe
+    const axes = new THREE.AxesHelper(span);
+    scene.add(axes);
+
+    // Marker als Sprite erstellen (immer gleiche Bildschirmgröße)
+    const material = new THREE.SpriteMaterial({ color: 0x000000 });
+    const sprite = new THREE.Sprite(material);
+    sprite.scale.set(10, 10, 1); // Anfangsgröße in Szeneeinheiten
+    sprite.visible = false;
+    scene.add(sprite);
+    markerRef.current = sprite;
+
+    // Platzhalter für Linien
+    scene.lines = { innerLine: null, outerLine: null };
+
+    const animate = () => {
+      requestAnimationFrame(animate);
+      controls.update();           // Damping + Bewegung
+
+      // Kamera / Target Werte **ohne State**
+      cameraPosRef.current.x = camera.position.x;
+      cameraPosRef.current.y = camera.position.y;
+      cameraPosRef.current.z = camera.position.z;
+
+      cameraTargetRef.current.x = controls.target.x;
+      cameraTargetRef.current.y = controls.target.y;
+      cameraTargetRef.current.z = controls.target.z;
+
+      renderer.render(scene, camera);
+    };
+
+    animate();
+
+    // Cleanup beim Unmount
+    return () => renderer.dispose();
+
+  }, []); // nur einmal beim ersten Render
+
+  /**
+ * Mouse Hover Tooltip für Profilpunkte
+ *
+ * Dieser useEffect registriert eine Mausbewegungs-Funktion auf dem Canvas,
+ * um beim Überfahren der Linienpunkte (inneres/äußeres Profil) die
+ * nächstgelegenen Punktkoordinaten anzuzeigen.
+ *
+ * Funktionsweise:
+ * 1. Mausposition wird in Normalized Device Coordinates (NDC) umgerechnet (-1 bis 1).
+ * 2. Ein THREE.Raycaster wird von der Kamera durch die Mausposition in den 3D-Raum gesetzt.
+ * 3. Alle Punkte der inneren und äußeren Profil-Linien werden durchlaufen, um den
+ *    minimalen Abstand vom Ray zur Linie zu bestimmen.
+ * 4. Wenn ein Punkt innerhalb eines definierten Thresholds (hier 10 Szeneeinheiten)
+ *    liegt, wird ein Tooltip-Div angezeigt.
+ * 5. Tooltip zeigt:
+ *      - Index des Punktes im Linien-Array
+ *      - x- und y/z-Koordinaten in Szeneeinheiten
+ *      - Farbe der Linie (inner/outer)
+ * 6. Tooltip folgt der Maus und verschwindet, wenn kein Punkt nah genug ist.
+ *
+ * Hinweise:
+ * - `closestPoint` ist der Punkt in 3D-Koordinaten der Szene.
+ * - Threshold kann je nach Szenegröße angepasst werden.
+ * - Performance: Bei sehr vielen Punkten (>1000) könnte es sinnvoll sein,
+ *   BufferGeometry als THREE.Points zu rendern und intersectObject zu verwenden.
+ */
+
+useEffect(() => {
+  const canvas = rendererRef.current.domElement;
+  const tooltip = tooltipRef.current;
+
+  const onMouseMove = (event) => {
+    const rect = canvas.getBoundingClientRect();
+    mouseRef.current.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    mouseRef.current.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+    const raycaster = raycasterRef.current;
+    raycaster.setFromCamera(mouseRef.current, cameraRef.current);
+
+    const lines = [sceneRef.current.lines.innerLine, sceneRef.current.lines.outerLine];
+    let closestPoint = null;
+    let minDist = Infinity;
+    let pointIndex = -1;
+    let lineColor = '';
+
+    lines.forEach(line => {
+      if (!line) return;
+      const positions = line.geometry.attributes.position.array;
+      for (let i = 0; i < positions.length; i += 3) {
+        const px = positions[i];
+        const py = positions[i+1];
+        const pz = positions[i+2];
+        const point = new THREE.Vector3(px, py, pz);
+        const dist = raycaster.ray.distanceToPoint(point);
+        if(dist < minDist){
+          minDist = dist;
+          closestPoint = point;
+          pointIndex = i/3;
+          lineColor = line.material.color.getStyle();
+        }
+      }
+    });
+
+    if (closestPoint && minDist < 10) {
+      tooltip.style.display = 'block';
+      tooltip.style.left = event.clientX + 10 + 'px';
+      tooltip.style.top = event.clientY + 10 + 'px';
+      tooltip.innerHTML = `Index: ${pointIndex}<br>x: ${closestPoint.x.toFixed(2)}<br>y: ${closestPoint.z.toFixed(2)}<br>Color: ${lineColor}`;
+
+      // Marker (Sprite) an die Position setzen
+      if (markerRef.current) {
+        markerRef.current.position.copy(closestPoint);
+        markerRef.current.visible = true;
+
+        // Optional: feste Bildschirmgröße beibehalten (Sprite)
+        const scale = 1; // gewünschte Größe in Szeneeinheiten
+        markerRef.current.scale.set(scale, scale, 1);
+      }
+    } else {
+      if (markerRef.current) markerRef.current.visible = false;
+      tooltip.style.display = 'none';
+    }
+
+
+
+
+  };
+
+  canvas.addEventListener('mousemove', onMouseMove);
+  return () => canvas.removeEventListener('mousemove', onMouseMove);
+}, []);
+
+
+
+  // --- File Handler ---
+  const handleFile = (e, setFunc, setName) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      setFunc(ev.target.result);
+      setName(file.name);
+    };
+    reader.readAsText(file);
+  };
+
+  // --- DAT Parser ---
+  const parseDAT = datText => {
+    const lines = datText.split(/\r?\n/).map(l => l.trim());
+    const pts = [];
+    for (const l of lines) {
+      const parts = l.split(/\s+/);
+      if (parts.length >= 2) {
+        const x = parseFloat(parts[0]);
+        const y = parseFloat(parts[1]);
+        if (!isNaN(x) && !isNaN(y)) pts.push([x, y]);
+      }
+    }
+    return pts;
+  };
+
+
+  //-----------------------------------------------------------------------------------
+
+function formatPoints(points) {
+  if (!points || points.length === 0) return '';
+
+  const result = [];
+  for (let i = 0; i < points.length; i++) {
+    const [x, y] = points[i];
+    const xStr = x.toFixed(2).replace('.', ',');
+    const yStr = y.toFixed(2).replace('.', ',');
+    result.push(`${xStr},${yStr}`);
+  }
+  return result.join(';');
+}
+
+  // --- Funktion: gleiche Punktezahl angleichen ---
+  const matchPointCount = (ptsA, ptsB) => {
+    const maxLen = Math.max(ptsA.length, ptsB.length);
+    const resample = (pts, targetLen) => {
+      const out = [];
+      for(let i=0;i<targetLen;i++){
+        const t = i/(targetLen-1)*(pts.length-1);
+        const i0=Math.floor(t), i1=Math.ceil(t);
+        const f = t-i0;
+        const x = pts[i0][0]*(1-f)+pts[i1][0]*f;
+        const y = pts[i0][1]*(1-f)+pts[i1][1]*f;
+        out.push([x,y]);
+      }
+      return out;
+    };
+    return [resample(ptsA,maxLen), resample(ptsB,maxLen)];
+  };
+
+  // --- Funktion: Skalieren der Profile ---
+  const scaleProfile = (pts, scale) => pts.map(([x,y])=>[x*scale, y*scale]);
+
+const findClosestHolePoint = (profilePts, holePts) => {
+  let minDist = Infinity;
+  let closestHoleIdx = 0;
+  let closestProfileIdx = 0;
+
+  profilePts.forEach(([px, py], i) => {
+    holePts.forEach(([hx, hy], j) => {
+      const dx = px - hx;
+      const dy = py - hy;
+      const dist = dx*dx + dy*dy;
+      if(dist < minDist) {
+        minDist = dist;
+        closestHoleIdx = j;
+        closestProfileIdx = i;
+      }
+    });
+  });
+
+  return {closestHoleIdx, closestProfileIdx};
+};
+
+// holePts = Array der Punkte des Lochkreises
+const rotateHolePointsToStart = (holePts, startIdx, reverse = false) => {
+  let pts = [...holePts.slice(startIdx), ...holePts.slice(0, startIdx)];
+  if (reverse) pts.reverse(); // einfach einmal umdrehen
+  return pts;
+};
+
+const createCutPoints = (profilePt, holePt, n=3) => {
+  const [px, py] = profilePt;
+  const [hx, hy] = holePt;
+  const points = [];
+  for(let i=1;i<=n;i++){
+    const t = i/(n+1); // gleichmäßig zwischen Profil und Loch
+    const x = px + t*(hx - px);
+    const y = py + t*(hy - py);
+    points.push([x,y]);
+  }
+  return points;
+};
+
+// Optional: Rotation um den vorderen Punkt (0,0)
+const rotatePoint = ([x, y], angleRad) => {
+  const cosA = Math.cos(angleRad);
+  const sinA = Math.sin(angleRad);
+  return [x * cosA - y * sinA, x * sinA + y * cosA];
+};
+
+const offsetOuterProfile = (pts, verticalOffset, chordOffset) => {
+  return pts.map(([x, y]) => [x + chordOffset, y + verticalOffset]);
+};
+
+const getHolePoints = (diameter, xPercent, yPercent, profilePts, nPoints) => {
+  if (!profilePts || profilePts.length === 0) return [];
+
+  const minX = Math.min(...profilePts.map(p => p[0]));
+  const maxX = Math.max(...profilePts.map(p => p[0]));
+  const minY = Math.min(...profilePts.map(p => p[1]));
+  const maxY = Math.max(...profilePts.map(p => p[1]));
+
+  const centerX = minX + xPercent * (maxX - minX);
+  const centerY = minY + yPercent * (maxY - minY);
+
+  const radius = diameter / 2;
+  const holePts = [];
+  for (let i = 0; i < nPoints; i++) {
+    const theta = (i / nPoints) * 2 * Math.PI;
+    const x = centerX + radius * Math.cos(theta);
+    const y = centerY + radius * Math.sin(theta);
+    holePts.push([x, y]);
+  }
+  return holePts;
+};
+
+    // Funktion: Punkte gleichmäßig entlang der Kurve verteilen
+  const resampleArcLength = (pts, targetLen) => {
+  if (pts.length < 2) return pts;
+
+  // Berechne kumulative Abstände
+  const distances = [0];
+  for (let i = 1; i < pts.length; i++) {
+    const dx = pts[i][0] - pts[i - 1][0];
+    const dy = pts[i][1] - pts[i - 1][1];
+    distances.push(distances[i - 1] + Math.hypot(dx, dy));
+  }
+  const totalLength = distances[distances.length - 1];
+
+  // Resample
+  const out = [];
+  for (let i = 0; i < targetLen; i++) {
+    const t = (i / (targetLen - 1)) * totalLength;
+
+    // Finde Segment
+    let j = 1;
+    while (j < distances.length && distances[j] < t) j++;
+    const i0 = j - 1;
+    const i1 = j;
+
+    const f = (t - distances[i0]) / (distances[i1] - distances[i0]);
+    const x = pts[i0][0] * (1 - f) + pts[i1][0] * f;
+    const y = pts[i0][1] * (1 - f) + pts[i1][1] * f;
+    out.push([x, y]);
+  }
+  return out;
+};
+
+    // Linien erstellen
+const createLine = (pts, yOffset, color) => {
+  const geometry = new THREE.BufferGeometry();
+  const vertices = [];
+  //pts.forEach(([x, y]) => vertices.push(x, yOffset, y)); // yOffset = Spannweite / Abstand
+  pts.forEach(([x, y]) => vertices.push(x, yOffset, y)); 
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+  return new THREE.Line(geometry, new THREE.LineBasicMaterial({ color }));
+};
+
+
+/**
+ * Fügt ein Loch in das Profil ein, inklusive Einlauf- und Auslauflinie.
+ * @param {Array} profilePts - Array der Profilpunkte [[x,y], ...]
+ * @param {Array} holePts - Array der Lochkreispunkte [[x,y], ...]
+ * @param {number} nCutPoints - Anzahl der zusätzlichen Punkte zwischen Profil und Lochkreis
+ * @returns {Array} neues Profil inklusive Loch
+ */
+function insertHoleWithInOut(profilePts, holePts, nCutPoints = 3) {
+  // Finde nächsten Profilpunkt zum Loch
+  const { closestProfileIdx: ipIdx, closestHoleIdx: ihIdx } = findClosestHolePoint(profilePts, holePts);
+
+  const profilePt = profilePts[ipIdx];
+  const holePt = holePts[ihIdx];
+
+  // Ein- und Auslaufpunkte
+  const inOutProfilePt = [...profilePt];
+  const inOutHolePt = [...holePt];
+
+  // Lochkreis rotieren, Start = closestHoleIdx
+  const rotatedHolePts = rotateHolePointsToStart(holePts, ihIdx, true);
+
+  // Schnittpunkte zwischen Profil und Lochkreis
+  const cutPts = createCutPoints(profilePt, holePt, nCutPoints);
+
+  // Neues Array erzeugen
+  const newProfile = [
+    ...profilePts.slice(0, ipIdx + 1),
+    inOutProfilePt,        // Einlauf Profil
+    ...cutPts,             // Einlauf Linie
+    inOutHolePt,           // Loch Start
+    ...rotatedHolePts.slice(1), // Loch Kreis
+    inOutHolePt,           // Loch Ende / Auslauf
+    ...cutPts.slice().reverse(), // Auslauf Linie
+    inOutProfilePt,        // Rückkehr Profil
+    ...profilePts.slice(ipIdx + 1) // Rest Profil
+  ];
+
+  return newProfile;
+}
+
+// Glättungsfunktion für kleine Sprünge
+function smoothProfile(points, threshold = 2) {
+  const smoothed = [points[0]];
+  for (let i = 1; i < points.length; i++) {
+    let [xPrev, yPrev] = smoothed[smoothed.length - 1];
+    let [x, y] = points[i];
+
+    // Wenn Sprung zu groß ist, lineare Interpolation
+    if (Math.abs(y - yPrev) > threshold) {
+      y = yPrev + Math.sign(y - yPrev) * threshold;
+    }
+    smoothed.push([x, y]);
+  }
+  return smoothed;
+}
+
+// Finde den Punkt auf der Oberseite (höchster Y) möglichst nahe an xCut
+function findTopPoint(profilePts, xCut) {
+  let bestPt = profilePts[0];
+  let minDx = Infinity;
+
+  for (const [x, y] of profilePts) {
+    const dx = Math.abs(x - xCut);
+    // Punkt wählen mit kleinster Distanz zu xCut, bei Gleichstand höchstes Y
+    if (dx < minDx || (dx === minDx && y > bestPt[1])) {
+      minDx = dx;
+      bestPt = [x, y];
+    }
+  }
+
+  return bestPt; // [x, yTop]
+}
+
+function findTopAtX(profilePts, xCut) {
+  const n = profilePts.length;
+  const half = Math.ceil(n / 2);
+  const topPts = profilePts.slice(0, half);
+
+  for (let i = 0; i < topPts.length - 1; i++) {
+    const [x1, y1] = topPts[i];
+    const [x2, y2] = topPts[i + 1];
+    if ((x1 <= xCut && x2 >= xCut) || (x2 <= xCut && x1 >= xCut)) {
+      const t = (xCut - x1) / (x2 - x1);
+      return y1 + t * (y2 - y1);
+    }
+  }
+
+  if (xCut <= topPts[0][0]) return topPts[0][1];
+  if (xCut >= topPts[topPts.length - 1][0]) return topPts[topPts.length - 1][1];
+  return topPts[0][1];
+}
+
+function findBottomAtX(profilePts, xCut) {
+  const n = profilePts.length;
+  const half = Math.ceil(n / 2);
+  const bottomPts = profilePts.slice(half);
+
+  for (let i = 0; i < bottomPts.length - 1; i++) {
+    const [x1, y1] = bottomPts[i];
+    const [x2, y2] = bottomPts[i + 1];
+    if ((x1 <= xCut && x2 >= xCut) || (x2 <= xCut && x1 >= xCut)) {
+      const t = (xCut - x1) / (x2 - x1);
+      return y1 + t * (y2 - y1);
+    }
+  }
+
+  if (xCut <= bottomPts[0][0]) return bottomPts[0][1];
+  if (xCut >= bottomPts[bottomPts.length - 1][0]) return bottomPts[bottomPts.length - 1][1];
+  return bottomPts[0][1];
+}
+
+function projectToProfile(profilePts, x) {
+  // Finde die beiden nächsten Punkte
+  for (let i = 0; i < profilePts.length - 1; i++) {
+    const [x0, y0] = profilePts[i];
+    const [x1, y1] = profilePts[i + 1];
+    if (x >= x0 && x <= x1) {
+      const t = (x - x0) / (x1 - x0);
+      return y0 + t * (y1 - y0);
+    }
+  }
+  // außerhalb, nimm y vom letzten Punkt
+  return profilePts[profilePts.length - 1][1];
+}
+
+function addBottomPath(profilePts, xPercent = 0.5, gap = 2, forwardAngleDeg = 10, backwardAngleDeg = 10) {
+
+  const forwardAngle = forwardAngleDeg * Math.PI / 180;
+  const backwardAngle = backwardAngleDeg * Math.PI / 180;
+
+  const xs = profilePts.map(p => p[0]);
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const xCut = minX + xPercent * (maxX - minX);
+
+  const yBottom = findBottomAtX(profilePts, xCut);
+  const yTop = findTopAtX(profilePts, xCut);
+
+  // **WICHTIG**: Spitze des V darf sich nur aus der Oberseite ergeben!
+  const apexY = yTop - gap;
+
+  const VHeight = apexY - yBottom;
+
+  const dxBack = Math.tan(backwardAngle) * VHeight;
+  const dxFwd = Math.tan(forwardAngle) * VHeight;
+
+  const apexPt = [xCut, apexY];
+  const backPt = [xCut - dxBack, yBottom];
+  const fwdPt = [xCut + dxFwd, yBottom];
+
+  const half = Math.ceil(profilePts.length / 2);
+  const bottomPts = profilePts.slice(half);
+
+  fwdPt[1] = projectToProfile(bottomPts, fwdPt[0]);
+  backPt[1] = projectToProfile(bottomPts, backPt[0]);
+
+  // Stelle fest, wo wir unten schneiden
+  let cutIdx = half;
+  let minDist = Infinity;
+  for (let i = half; i < profilePts.length; i++) {
+    const dx = Math.abs(profilePts[i][0] - xCut);
+    if (dx < minDist) {
+      minDist = dx;
+      cutIdx = i;
+    }
+  }
+
+  // links von backPt
+  const left = bottomPts.filter(p => p[0] < backPt[0]);
+  // rechts von fwdPt
+  const right = bottomPts.filter(p => p[0] > fwdPt[0]);
+
+      // --- DEBUG ---
+  /*console.log("----- DEBUG addBottomPath -----");
+  console.log("xCut:", xCut);
+  console.log("apexPt:", apexPt);
+  console.log("backPt (Start V):", backPt);
+  console.log("fwdPt (End V):", fwdPt);
+  console.log("cutIdx in bottomPts:", cutIdx, "point at cutIdx:", profilePts[cutIdx]);
+  console.log("-------------------------------");*/
+
+  const newBottom = [
+  ...left,
+  backPt,
+  apexPt,
+  fwdPt,
+  ...right
+];
+
+  return [
+    ...profilePts.slice(0, half),
+    ...newBottom
+  ];
+}
+
+  // --- Linien aktualisieren, wenn sich Daten oder Skalen ändern ---
+  useEffect(() => {
+    if (!innerDAT || !outerDAT || !sceneRef.current) return;
+
+    const scene = sceneRef.current;
+
+    // Statt nur parseDAT:
+    let innerPts = parseDAT(innerDAT);
+    let outerPts = parseDAT(outerDAT);
+
+    // Resample direkt auf z.B. 200–300 Punkte
+    innerPts = resampleArcLength(innerPts, profilePointsCount);
+    outerPts = resampleArcLength(outerPts, profilePointsCount);
+
+    // Danach skalieren
+    innerPts = scaleProfile(innerPts, innerScale);
+    outerPts = scaleProfile(outerPts, outerScale);
+
+    // Dicke skalieren (Y-Achse)
+    const innerPtsScaled = innerPts.map(([x, y]) => [x, y * thicknessScaleInner]);
+    const outerPtsScaled = outerPts.map(([x, y]) => [x, y * thicknessScaleOuter]);
+
+    // Offset des auesseren Profiles
+    const outerPtsOffset = offsetOuterProfile(outerPtsScaled, outerVerticalOffset, outerChordOffset);
+
+    let innerWithScaled = innerPtsScaled.slice(); //kein Offset notwendig, nur bei außeren Profil
+    let outerWithScaled = outerPtsOffset.slice(); //Offset
+
+    //Anzahl der PUnkte im Profil innen und aussen gleich machen
+    [innerWithScaled, outerWithScaled] = matchPointCount(innerWithScaled, outerWithScaled);
+
+    // --- Nach dem ersten matchPointCount ---
+    const targetLen = innerWithScaled.length; // beide gleich lang
+    innerWithScaled = resampleArcLength(innerWithScaled, targetLen);
+    outerWithScaled = resampleArcLength(outerWithScaled, targetLen);
+
+    // --- Glätten der Profile, bevor Löcher geschnitten werden ---
+    let innerWithAilerons = smoothProfile(innerWithScaled, 2); // threshold anpassen
+    let outerWithAilerons = smoothProfile(outerWithScaled, 2);
+
+    ailerons.forEach(a => {
+      innerWithAilerons = addBottomPath(innerWithAilerons, a.xPercent, a.thicknessTop, a.frontAngleDeg, a.rearAngleDeg);
+      outerWithAilerons = addBottomPath(outerWithAilerons, a.xPercent, a.thicknessTop, a.frontAngleDeg, a.rearAngleDeg);
+    });
+
+    //setDebugPoints({ inner: innerWithHoles, outer: outerWithHoles });
+    //const [innerAligned, outerAligned] = matchPointCount(innerWithHoles, outerWithHoles);
+   
+    let innerWithHoles = innerWithAilerons.slice();
+    let outerWithHoles = outerWithAilerons.slice();
+
+    //Jedes Loch einschneiden und erzeugen
+    holes.forEach(h => {
+      const holePtsInner = getHolePoints(h.diameter, h.xPercent, h.yPercent, innerWithHoles, h.nPoints);
+      innerWithHoles = insertHoleWithInOut(innerWithHoles, holePtsInner, 3);
+
+      const holePtsOuter = getHolePoints(h.diameter, h.xPercent, h.yPercent, outerWithHoles, h.nPoints);
+      outerWithHoles = insertHoleWithInOut(outerWithHoles, holePtsOuter, 3);
+    });
+
+    // Rotation um den vorderen Punkt
+    const innerPtsRotated = innerWithHoles.map(pt => rotatePoint(pt, rotationInner));
+    const outerPtsRotated = outerWithHoles.map(pt => rotatePoint(pt, rotationOuter));
+
+    // Final: Punkte für Darstellung inklusive Löcher
+    const innerPtsFinal = innerPtsRotated; // innere Punkte plus alle Löcher
+    const outerPtsFinal = outerPtsRotated; // äußere Punkte plus Offset plus Löcher
+
+    //Punkte Final Schreiben
+    const [innerAligned, outerAligned] = matchPointCount(innerPtsFinal, outerPtsFinal);
+    
+    // Optional: Debug-Ausgabe in Konsole
+    //console.log("Inner Final Points:", innerAligned);
+    //console.log("Outer Final Points:", outerAligned);
+
+    // Alte Linien entfernen
+    if (scene.lines.innerLine) scene.remove(scene.lines.innerLine);
+    if (scene.lines.outerLine) scene.remove(scene.lines.outerLine);
+
+    scene.lines.innerLine = createLine(innerAligned, -span / 2, parseInt(innerColor.replace("#","0x"),16));
+    scene.lines.outerLine = createLine(outerAligned, span / 2, parseInt(outerColor.replace("#","0x"),16));
+
+    scene.add(scene.lines.innerLine);
+    scene.add(scene.lines.outerLine);
+
+    setDebugPoints({ inner: innerPtsFinal, outer: outerPtsFinal });
+  }, [
+    innerDAT, outerDAT, 
+    innerScale, outerScale, 
+    span, 
+    thicknessScaleInner, thicknessScaleOuter, 
+    rotationInner, rotationOuter,
+    outerVerticalOffset, outerChordOffset,
+    holes,
+    profilePointsCount,
+    ailerons,
+    innerColor, outerColor
+  ]);
+
+
+
+//-----------------------------------------------------------------------------------
+
+
+return (
+  <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: 12, height: 'calc(100vh - 60px)', boxSizing: 'border-box' }}>
+    <h2>Hotwire Wing 3D Preview</h2>
+
+    <div style={{ display: 'flex', gap: 12, flex: 1, minHeight: 0 }}>
+      
+      {/* Linke Sidebar */}
+      <div
+        style={{
+          flex: '0 0 500px',
+          overflowY: 'auto',
+          paddingRight: 6,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 12,
+          minHeight: 0, // sehr wichtig für Scroll
+        }}
+      >
+        <div style={{ fontSize: 12, background: '#f7f7f7', padding: 8, border: '1px solid #ccc' }}>
+          <b>Aktuelle View:</b><br />
+          Kamera: {cameraPosRef.current.x.toFixed(1)}, {cameraPosRef.current.y.toFixed(1)}, {cameraPosRef.current.z.toFixed(1)}<br />
+          Zielpunkt: {cameraTargetRef.current.x.toFixed(1)}, {cameraTargetRef.current.y.toFixed(1)}, {cameraTargetRef.current.z.toFixed(1)}
+        </div>
+
+        <label>
+          Inner rib DAT
+          <input type="file" accept=".dat" onChange={e => handleFile(e, setInnerDAT, setInnerName)} />
+          <span>{innerName}</span>
+        </label>
+
+        <label>
+          Outer rib DAT
+          <input type="file" accept=".dat" onChange={e => handleFile(e, setOuterDAT, setOuterName)} />
+          <span>{outerName}</span>
+        </label>
+
+        <label>
+          Spannweite (mm)
+          <input type="number" value={span} onChange={e => setSpan(Number(e.target.value))} />
+          <input type="range" min="10" max="3000" step="1" value={span} onChange={e => setSpan(Number(e.target.value))} />
+        </label>
+
+        <label>
+          Anzahl Punkte pro Profil
+          <input type="number" value={profilePointsCount} min="10" max="1000" onChange={e => setProfilePointsCount(Number(e.target.value))} />
+          <input type="range" min="10" max="1000" step="1" value={profilePointsCount} onChange={e => setProfilePointsCount(Number(e.target.value))} />
+        </label>
+
+        {/* Inner Profil */}
+        <div className="profile-box">
+          <div className="profile-header" onClick={() => setActiveTab('inner')} style={{ color: innerColor }}>Inner Profil</div>
+          {activeTab === 'inner' && (
+            <div className="profile-content">
+              <label>Farbe
+                <input type="color" value={innerColor} onChange={e => setInnerColor(e.target.value)} />
+              </label>
+              <label>Inner Profil Länge/Skalierung (mm)
+                <input type="number" value={innerScale} onChange={e => setInnerScale(Number(e.target.value))} />
+                <input type="range" min="10" max="1000" step="1" value={innerScale} onChange={e => setInnerScale(Number(e.target.value))} />
+              </label>
+              <label>Inner Profil Dicke
+                <input type="number" step="0.01" min="0.5" max="1.5" value={thicknessScaleInner} onChange={e => setThicknessScaleInner(Number(e.target.value))} />
+                <input type="range" step="0.01" min="0.5" max="1.5" value={thicknessScaleInner} onChange={e => setThicknessScaleInner(Number(e.target.value))} />
+              </label>
+              <label>Inner Profil Rotation (°)
+                <input type="number" step="1" min="-25" max="25" value={rotationInner * 180 / Math.PI} onChange={e => setRotationInner(Number(e.target.value) * Math.PI / 180)} />
+                <input type="range" step="1" min="-25" max="25" value={rotationInner * 180 / Math.PI} onChange={e => setRotationInner(Number(e.target.value) * Math.PI / 180)} />
+              </label>
+            </div>
+          )}
+        </div>
+
+{/* Outer Profil */}
+<div className="profile-box">
+  <div
+    className="profile-header"
+    onClick={() => setActiveTab('outer')}
+    style={{ color: outerColor }}
+  >
+    Outer Profil
+  </div>
+  {activeTab === 'outer' && (
+    <div className="profile-content">
+      <label>Farbe
+        <input type="color" value={outerColor} onChange={e => setOuterColor(e.target.value)} />
+      </label>
+      <label>Outer Profil Länge/Skalierung (mm)
+        <input type="number" value={outerScale} onChange={e => setOuterScale(Number(e.target.value))} />
+        <input type="range" min="10" max="1000" step="1" value={outerScale} onChange={e => setOuterScale(Number(e.target.value))} />
+      </label>
+      <label>Outer Profil Dicke
+        <input type="number" step="0.01" min="0.5" max="1.5" value={thicknessScaleOuter} onChange={e => setThicknessScaleOuter(Number(e.target.value))} />
+        <input type="range" step="0.01" min="0.5" max="1.5" value={thicknessScaleOuter} onChange={e => setThicknessScaleOuter(Number(e.target.value))} />
+      </label>
+      <label>Outer Profil Rotation (°)
+        <input type="number" step="1" min="-25" max="25" value={rotationOuter * 180 / Math.PI} onChange={e => setRotationOuter(Number(e.target.value) * Math.PI / 180)} />
+        <input type="range" step="1" min="-25" max="25" value={rotationOuter * 180 / Math.PI} onChange={e => setRotationOuter(Number(e.target.value) * Math.PI / 180)} />
+      </label>
+      <label>Outer Profil Verschiebung (Vertikal mm)
+        <input type="number" value={outerVerticalOffset} onChange={e => setOuterVerticalOffset(Number(e.target.value))} />
+        <input type="range" min={-500} max={500} value={outerVerticalOffset} onChange={e => setOuterVerticalOffset(Number(e.target.value))} />
+      </label>
+      <label>Outer Profil Verschiebung (Chord mm)
+        <input type="number" value={outerChordOffset} onChange={e => setOuterChordOffset(Number(e.target.value))} />
+        <input type="range" min={-1000} max={1000} value={outerChordOffset} onChange={e => setOuterChordOffset(Number(e.target.value))} />
+      </label>
+    </div>
+  )}
+</div>
+
+
+        {/* Holes */}
+        <div className="profile-box">
+          <div className="profile-header" onClick={() => setActiveTab('holes')}>Holes</div>
+          {activeTab === 'holes' && (
+            <div className="profile-content">
+              {holes.map((h, i) => (
+                <div key={i} style={{ border: '1px solid #ccc', marginBottom: 6, padding: 4 }}>
+                  <label>Hole {i+1} Diameter (mm)
+                    <input type="number" value={h.diameter} onChange={e => {
+                      const newHoles = [...holes];
+                      newHoles[i].diameter = Number(e.target.value);
+                      setHoles(newHoles);
+                    }} />
+                  </label>
+                  <label>Punkteanzahl</label>
+                    <input type="number" min="3" step="1" value={h.nPoints} onChange={e => {
+                      const newHoles = [...holes];
+                      newHoles[i].nPoints = Number(e.target.value);
+                      setHoles(newHoles);
+                    }} />
+                  <label>Horizontal Position (%)</label>
+                  <input type="number" min="0" max="1" step="0.01" value={h.xPercent} onChange={e => {
+                    const newHoles = [...holes];
+                    newHoles[i].xPercent = parseFloat(e.target.value);
+                    setHoles(newHoles);
+                  }} />
+                  <input type="range" min="0" max="1" step="0.01" value={h.xPercent} onChange={e => {
+                    const newHoles = [...holes];
+                    newHoles[i].xPercent = parseFloat(e.target.value);
+                    setHoles(newHoles);
+                  }} />
+                  <label>Vertical Position (%)</label>
+                  <input type="number" min="0" max="1" step="0.01" value={h.yPercent} onChange={e => {
+                    const newHoles = [...holes];
+                    newHoles[i].yPercent = parseFloat(e.target.value);
+                    setHoles(newHoles);
+                  }} />
+                  <input type="range" min="0" max="1" step="0.01" value={h.yPercent} onChange={e => {
+                    const newHoles = [...holes];
+                    newHoles[i].yPercent = parseFloat(e.target.value);
+                    setHoles(newHoles);
+                  }} />
+                  <div style={{ marginTop: 8 }}>
+                    <button onClick={() => setHoles(holes.filter((_, idx) => idx !== i))}>Delete Hole</button>
+                  </div>
+                </div>
+              ))}
+              <button onClick={() => setHoles([...holes, { diameter: 5, xPercent: 0.5, yPercent: 0.5, nPoints: 30 }])}>Add New Hole</button>
+            </div>
+          )}
+        </div>
+
+        {/* Ailerons */}
+        <div className="profile-box">
+          <div className="profile-header" onClick={() => setActiveTab('ailerons')}>Aileron Cut</div>
+          {activeTab === 'ailerons' && (
+            <div className="profile-content" style={{ border: '1px solid #ccc', padding: 6, marginTop: 6 }}>
+              {ailerons.map((a, idx) => (
+                <div key={idx} style={{ border: '1px solid #aaa', marginBottom: 6, padding: 4 }}>
+                  <label>Restdicke Oberseite (mm)</label>
+                  <input type="number" min="0" step="0.1" value={a.thicknessTop} onChange={e => {
+                    const newAilerons = [...ailerons];
+                    newAilerons[idx].thicknessTop = Number(e.target.value);
+                    setAilerons(newAilerons);
+                  }} />
+                  <label>Position von hinten (%)</label>
+                  <input type="number" min="0" max="1" step="0.01" value={a.xPercent} onChange={e => {
+                    const newAilerons = [...ailerons];
+                    newAilerons[idx].xPercent = parseFloat(e.target.value);
+                    setAilerons(newAilerons);
+                  }} />
+                  <input type="range" min="0" max="1" step="0.01" value={a.xPercent} onChange={e => {
+                    const newAilerons = [...ailerons];
+                    newAilerons[idx].xPercent = parseFloat(e.target.value);
+                    setAilerons(newAilerons);
+                  }} />
+                  <label>Front V-Winkel (°)</label>
+                  <input type="number" min="0" max="60" step="1" value={a.frontAngleDeg} onChange={e => {
+                    const newAilerons = [...ailerons];
+                    newAilerons[idx].frontAngleDeg = Number(e.target.value);
+                    setAilerons(newAilerons);
+                  }} />
+                  <input type="range" min="0" max="60" step="1" value={a.frontAngleDeg} onChange={e => {
+                    const newAilerons = [...ailerons];
+                    newAilerons[idx].frontAngleDeg = Number(e.target.value);
+                    setAilerons(newAilerons);
+                  }} />
+                  <label>Rear V-Winkel (°)</label>
+                  <input type="number" min="0" max="60" step="1" value={a.rearAngleDeg} onChange={e => {
+                    const newAilerons = [...ailerons];
+                    newAilerons[idx].rearAngleDeg = Number(e.target.value);
+                    setAilerons(newAilerons);
+                  }} />
+                  <input type="range" min="0" max="60" step="1" value={a.rearAngleDeg} onChange={e => {
+                    const newAilerons = [...ailerons];
+                    newAilerons[idx].rearAngleDeg = Number(e.target.value);
+                    setAilerons(newAilerons);
+                  }} />
+                  <div style={{ marginTop: 4 }}>
+                    <button onClick={() => setAilerons(ailerons.filter((_, i) => i !== idx))}>Delete Aileron</button>
+                  </div>
+                </div>
+              ))}
+              <button onClick={() => setAilerons([...ailerons, { thicknessTop: 2, xPercent: 0.7, frontAngleDeg: 15, rearAngleDeg: 15 }])}>Add New Aileron</button>
+            </div>
+          )}
+        </div>
+
+
+        {/* Debug Punkte */}
+        <div className="profile-box">
+          <div className="profile-header" onClick={() => setDebugOpen(!debugOpen)}>Debug Punkte</div>
+          {debugOpen && (
+            <div className="profile-content" style={{ display: 'flex', gap: 16, maxHeight: 200, overflowY: 'auto', padding: 8, background: '#f9f9f9', border: '1px solid #ccc' }}>
+              <button onClick={() => {
+                const formatPoints = (points) =>
+                  points.map(([x, y]) => `${x.toFixed(2)},${y.toFixed(2)}`.replace(',', ';').replace(/\./g, ',')).join('\n');
+                const innerText = formatPoints(debugPoints.inner);
+                const outerText = formatPoints(debugPoints.outer);
+                const combined = `--- Inneres Profil ---\n${innerText}\n\n--- Äußeres Profil ---\n${outerText}`;
+                navigator.clipboard.writeText(combined).then(() => alert('Punkte in die Zwischenablage kopiert'));
+              }}>Copy to<br />Clipboard</button>
+              <div style={{ flex: 1 }}>
+                <h4>{innerName || 'Inneres Profil'}</h4>
+                <div style={{ fontFamily: 'monospace', fontSize: 12, whiteSpace: 'pre' }}>
+                  {debugPoints.inner.map(([x, y]) => `${x.toFixed(2)},${y.toFixed(2)}`.replace(',', ';').replace(/\./g, ',')).join('\n')}
+                </div>
+              </div>
+              <div style={{ flex: 1 }}>
+                <h4>{outerName || 'Äußeres Profil'}</h4>
+                <div style={{ fontFamily: 'monospace', fontSize: 12, whiteSpace: 'pre' }}>
+                  {debugPoints.outer.map(([x, y]) => `${x.toFixed(2)},${y.toFixed(2)}`.replace(',', ';').replace(/\./g, ',')).join('\n')}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+      </div>
+
+      {/* Rechte Canvas-Box */}
+      <div ref={canvasRef} id="canvas-container" style={{flex: 1, minHeight: 0, maxHeight: 'calc(100vh - 160px)',  overflow: 'hidden' }}
+></div>
+      {/* Canvas-Box TooltiipRef */}
+<div ref={tooltipRef} style={{ position:'absolute', padding:'4px 6px', background:'#000', color:'#fff', borderRadius:4, pointerEvents:'none', display:'none', fontSize:12 }}></div>
+    </div>
+  </div>
+);
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<HotwireWing3D />);
+
+// Dynamisches Favicon erstellen
+(() => {
+  const canvas = document.createElement('canvas');
+  canvas.width = 32;
+  canvas.height = 32;
+  const ctx = canvas.getContext('2d');
+
+  // Hintergrund transparent
+  ctx.clearRect(0, 0, 32, 32);
+
+  // Flügel-Silhouette
+  ctx.strokeStyle = '#0077FF'; // Blau
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(4, 24);
+  ctx.quadraticCurveTo(16, 0, 28, 24);
+  ctx.lineTo(4, 24);
+  ctx.stroke();
+
+  // Initialen HW
+  ctx.fillStyle = '#FF0000'; // Rot
+  ctx.font = 'bold 10px sans-serif';
+  ctx.fillText('HW', 6, 28);
+
+  // Data URL erzeugen
+  const faviconURL = canvas.toDataURL('image/png');
+
+  // Favicon ins Head einfügen
+  const link = document.createElement('link');
+  link.rel = 'icon';
+  link.type = 'image/png';
+  link.href = faviconURL;
+  document.head.appendChild(link);
+})();
+
+
+</script>
+</body>
+</html>

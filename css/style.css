@@ -1,0 +1,20 @@
+/* style.css */
+
+.profile-box {
+  border: 1px solid #aaa;
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 12px;
+  background-color: #f9f9f9;
+}
+
+.profile-header {
+  font-weight: bold;
+  cursor: pointer;
+  margin-bottom: 8px;
+  user-select: none;
+}
+
+.profile-content {
+  padding: 6px 0;
+}
