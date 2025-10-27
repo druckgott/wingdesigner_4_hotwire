@@ -54,6 +54,11 @@ function HotwireWing3D() {
   const [ailerons, setAilerons] = useState([{thicknessTop: 2, xPercent: 0.7, frontAngleDeg: 15, rearAngleDeg: 15}]);
   // Cut: {Restdicke oben in mm,Position von hinten in % ,V-Winkel des Cuts}
 
+  //Nasenleiste und Endleiste trimmen
+  const [trimEnabled, setTrimEnabled] = useState(false);
+  const [trimLEmm, setTrimLEmm] = useState(0);
+  const [trimTEmm, setTrimTEmm] = useState(0);
+
   //Page
   const [activeTab, setActiveTab] = useState(null);
 
@@ -649,6 +654,57 @@ function addBottomPath(profilePts, xPercent = 0.5, gap = 2, forwardAngleDeg = 10
   ];
 }
 
+/**
+ * Trimmt nur die Vorderkante eines Airfoils und fügt gerade Schnittpunkte oben und unten ein
+ * @param {Array<[number, number]>} points - Array von [x, y]
+ * @param {number} trimLEmm - wie viele mm vorne abgeschnitten werden sollen
+ * @returns {Array<[number, number]>} - getrimmtes Profil
+ */
+function trimAirfoilFront(points, trimLEmm) {
+    if (!points || points.length < 2 || trimLEmm <= 0) return points;
+
+    const xMin = Math.min(...points.map(p => p[0]));
+    const xLimit = xMin + trimLEmm;
+
+    let topPoint = null;
+    let bottomPoint = null;
+    let topIndex = null;
+    let bottomIndex = null;
+
+    // Von hinten nach vorne für Oberseite (höchstes Y)
+    for (let i = points.length - 1; i >= 0; i--) {
+        if (points[i][0] <= xLimit) {
+            topPoint = [xLimit, points[i][1]]; // exakt auf xLimit
+            topIndex = i;
+            break;
+        }
+    }
+
+    // Von vorne nach hinten für Unterseite (niedrigstes Y)
+    for (let i = 0; i < points.length; i++) {
+        if (points[i][0] <= xLimit) {
+            bottomPoint = [xLimit, points[i][1]]; // exakt auf xLimit
+            bottomIndex = i;
+            break;
+        }
+    }
+
+    if (topPoint === null || bottomPoint === null) {
+        console.log("Keine Punkte für Frontkante gefunden");
+        return points;
+    }
+
+    // Neues Profil zusammenbauen
+    const newPoints = [
+        ...points.slice(0, bottomIndex),  // alles vor unterem Punkt
+        bottomPoint,                      // unterer Punkt auf xLimit
+        topPoint,                         // oberer Punkt auf xLimit
+        ...points.slice(topIndex + 1)     // alles nach oberem Punkt
+    ];
+
+    return newPoints;
+}
+
   // --- Linien aktualisieren, wenn sich Daten oder Skalen ändern ---
   useEffect(() => {
     if (!innerDAT || !outerDAT || !sceneRef.current) return;
@@ -709,16 +765,19 @@ function addBottomPath(profilePts, xPercent = 0.5, gap = 2, forwardAngleDeg = 10
       outerWithHoles = insertHoleWithInOut(outerWithHoles, holePtsOuter, 3);
     });
 
+    // trimmen (wenn aktiviert)
+    const innerTrimmed = trimEnabled ? trimAirfoilFront(innerWithHoles, trimLEmm) || innerWithHoles : innerWithHoles;
+    const outerTrimmed = trimEnabled ? trimAirfoilFront(outerWithHoles, trimLEmm) || outerWithHoles : outerWithHoles;
+
+    setDebugPoints({ inner: innerTrimmed, outer: outerTrimmed });
+
     // Rotation um den vorderen Punkt
-    const innerPtsRotated = innerWithHoles.map(pt => rotatePoint(pt, rotationInner));
-    const outerPtsRotated = outerWithHoles.map(pt => rotatePoint(pt, rotationOuter));
+    const innerPtsRotated = innerTrimmed.map(pt => rotatePoint(pt, rotationInner));
+    const outerPtsRotated = outerTrimmed.map(pt => rotatePoint(pt, rotationOuter));
 
     // Final: Punkte für Darstellung inklusive Löcher
     const innerPtsFinal = innerPtsRotated; // innere Punkte plus alle Löcher
     const outerPtsFinal = outerPtsRotated; // äußere Punkte plus Offset plus Löcher
-
-    //Punkte Final Schreiben
-    const [innerAligned, outerAligned] = matchPointCount(innerPtsFinal, outerPtsFinal);
     
     // Optional: Debug-Ausgabe in Konsole
     //console.log("Inner Final Points:", innerAligned);
@@ -728,13 +787,13 @@ function addBottomPath(profilePts, xPercent = 0.5, gap = 2, forwardAngleDeg = 10
     if (scene.lines.innerLine) scene.remove(scene.lines.innerLine);
     if (scene.lines.outerLine) scene.remove(scene.lines.outerLine);
 
-    scene.lines.innerLine = createLine(innerAligned, -span / 2, parseInt(innerColor.replace("#","0x"),16));
-    scene.lines.outerLine = createLine(outerAligned, span / 2, parseInt(outerColor.replace("#","0x"),16));
+    scene.lines.innerLine = createLine(innerPtsFinal, -span / 2, parseInt(innerColor.replace("#","0x"),16));
+    scene.lines.outerLine = createLine(outerPtsFinal, span / 2, parseInt(outerColor.replace("#","0x"),16));
 
     scene.add(scene.lines.innerLine);
     scene.add(scene.lines.outerLine);
 
-    setDebugPoints({ inner: innerPtsFinal, outer: outerPtsFinal });
+    //setDebugPoints({ inner: innerPtsFinal, outer: outerPtsFinal });
   }, [
     innerDAT, outerDAT, 
     innerScale, outerScale, 
@@ -745,7 +804,8 @@ function addBottomPath(profilePts, xPercent = 0.5, gap = 2, forwardAngleDeg = 10
     holes,
     profilePointsCount,
     ailerons,
-    innerColor, outerColor
+    innerColor, outerColor,
+    trimEnabled, trimLEmm, trimTEmm
   ]);
 
 
@@ -968,6 +1028,38 @@ return (
                 </div>
               ))}
               <button onClick={() => setAilerons([...ailerons, { thicknessTop: 2, xPercent: 0.7, frontAngleDeg: 15, rearAngleDeg: 15 }])}>Add New Aileron</button>
+            </div>
+          )}
+        </div>
+
+
+        {/* Trim Airfoil */}
+        <div className="profile-box">
+          <div className="profile-header" onClick={() => setActiveTab('trim')}>Trim Airfoil</div>
+          {activeTab === 'trim' && (
+            <div className="profile-content" style={{ border: '1px solid #ccc', padding: 6, marginTop: 6 }}>
+
+              {/* Aktivieren / Deaktivieren */}
+              <div style={{ marginBottom: 8 }}>
+                <label>
+                  <input type="checkbox" checked={trimEnabled} onChange={e => setTrimEnabled(e.target.checked)} /> Enable Trim
+                </label>
+              </div>
+
+              {/* Nasenleiste (LE) */}
+              <div style={{ marginBottom: 6 }}>
+                <label>Nasenleiste Trim (LE) [mm]</label>
+                <input type="number" min="0" step="0.1" value={trimLEmm} onChange={e => setTrimLEmm(Number(e.target.value))} disabled={!trimEnabled} /> 
+                <input type="range" min="0" max="20" step="0.1" value={trimLEmm} onChange={e => setTrimLEmm(Number(e.target.value))} disabled={!trimEnabled} />
+              </div>
+
+              {/* Endleiste (TE) */}
+              <div style={{ marginBottom: 6 }}>
+                <label>Endleiste Trim (TE) [mm]</label>
+                <input type="number" min="0" step="0.1" value={trimTEmm} onChange={e => setTrimTEmm(Number(e.target.value))} disabled={!trimEnabled} /> 
+                <input type="range" min="0" max="20" step="0.1" value={trimTEmm} onChange={e => setTrimTEmm(Number(e.target.value))} disabled={!trimEnabled} />
+              </div>
+
             </div>
           )}
         </div>
