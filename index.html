@@ -28,6 +28,8 @@ function HotwireWing3D() {
 
   const PointTag = {
     PROFILE: "profile",
+    START: "start",
+    END: "end",
     LE: "LE",
     TE: "TE",
     HOLE: "hole",
@@ -158,6 +160,8 @@ function HotwireWing3D() {
     // Achsenhilfe
     const axes = new THREE.AxesHelper(span);
     scene.add(axes);
+    
+
 
     // Marker als Sprite erstellen (immer gleiche Bildschirmgröße)
     const material = new THREE.SpriteMaterial({ color: 0x000000 });
@@ -193,36 +197,30 @@ function HotwireWing3D() {
 
   }, []); // nur einmal beim ersten Render
 
-  /**
- * Mouse Hover Tooltip für Profilpunkte
- *
- * Dieser useEffect registriert eine Mausbewegungs-Funktion auf dem Canvas,
- * um beim Überfahren der Linienpunkte (inneres/äußeres Profil) die
- * nächstgelegenen Punktkoordinaten anzuzeigen.
- *
- * Funktionsweise:
- * 1. Mausposition wird in Normalized Device Coordinates (NDC) umgerechnet (-1 bis 1).
- * 2. Ein THREE.Raycaster wird von der Kamera durch die Mausposition in den 3D-Raum gesetzt.
- * 3. Alle Punkte der inneren und äußeren Profil-Linien werden durchlaufen, um den
- *    minimalen Abstand vom Ray zur Linie zu bestimmen.
- * 4. Wenn ein Punkt innerhalb eines definierten Thresholds (hier 10 Szeneeinheiten)
- *    liegt, wird ein Tooltip-Div angezeigt.
- * 5. Tooltip zeigt:
- *      - Index des Punktes im Linien-Array
- *      - x- und y/z-Koordinaten in Szeneeinheiten
- *      - Farbe der Linie (inner/outer)
- * 6. Tooltip folgt der Maus und verschwindet, wenn kein Punkt nah genug ist.
- *
- * Hinweise:
- * - `closestPoint` ist der Punkt in 3D-Koordinaten der Szene.
- * - Threshold kann je nach Szenegröße angepasst werden.
- * - Performance: Bei sehr vielen Punkten (>1000) könnte es sinnvoll sein,
- *   BufferGeometry als THREE.Points zu rendern und intersectObject zu verwenden.
- */
-
 useEffect(() => {
   const canvas = rendererRef.current.domElement;
   const tooltip = tooltipRef.current;
+
+  // Marker für Tag-Punkte vorbereiten
+  const tagMarkers = [];
+  const greenMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+  const sphereGeom = new THREE.SphereGeometry(0.2, 8, 8);
+
+  [sceneRef.current.lines.innerLine, sceneRef.current.lines.outerLine].forEach(line => {
+    if (!line) return;
+    const positions = line.geometry.attributes.position.array;
+    const tags = (line.geometry.attributes.tag && line.geometry.attributes.tag.array) || [];
+    for (let i = 0; i < positions.length; i += 3) {
+      const tag = tags[i / 3];
+      if (tag === PointTag.START || tag === PointTag.END || tag === PointTag.PROFILE) {
+        const marker = new THREE.Mesh(sphereGeom, greenMaterial);
+        marker.position.set(positions[i], positions[i + 1], positions[i + 2]);
+        marker.visible = false; // zunächst unsichtbar
+        sceneRef.current.add(marker);
+        tagMarkers.push(marker);
+      }
+    }
+  });
 
   const onMouseMove = (event) => {
     const rect = canvas.getBoundingClientRect();
@@ -243,48 +241,46 @@ useEffect(() => {
       const positions = line.geometry.attributes.position.array;
       for (let i = 0; i < positions.length; i += 3) {
         const px = positions[i];
-        const py = positions[i+1];
-        const pz = positions[i+2];
+        const py = positions[i + 1];
+        const pz = positions[i + 2];
         const point = new THREE.Vector3(px, py, pz);
         const dist = raycaster.ray.distanceToPoint(point);
-        if(dist < minDist){
+        if (dist < minDist) {
           minDist = dist;
           closestPoint = point;
-          pointIndex = i/3;
+          pointIndex = i / 3;
           lineColor = line.material.color.getStyle();
         }
       }
     });
 
-    if (closestPoint && minDist < 10) {
+    const hovering = closestPoint && minDist < 10;
+
+    // Tooltip & Hauptmarker wie bisher
+    if (hovering) {
       tooltip.style.display = 'block';
       tooltip.style.left = event.clientX + 10 + 'px';
       tooltip.style.top = event.clientY + 10 + 'px';
       tooltip.innerHTML = `Index: ${pointIndex}<br>x: ${closestPoint.x.toFixed(2)}<br>y: ${closestPoint.z.toFixed(2)}<br>Color: ${lineColor}`;
 
-      // Marker (Sprite) an die Position setzen
       if (markerRef.current) {
         markerRef.current.position.copy(closestPoint);
         markerRef.current.visible = true;
-
-        // Optional: feste Bildschirmgröße beibehalten (Sprite)
-        const scale = 1; // gewünschte Größe in Szeneeinheiten
-        markerRef.current.scale.set(scale, scale, 1);
+        markerRef.current.scale.set(1, 1, 1);
       }
+
+      // Alle Tag-Marker sichtbar machen
+      tagMarkers.forEach(m => (m.visible = true));
     } else {
-      if (markerRef.current) markerRef.current.visible = false;
       tooltip.style.display = 'none';
+      if (markerRef.current) markerRef.current.visible = false;
+      tagMarkers.forEach(m => (m.visible = false));
     }
-
-
-
-
   };
 
   canvas.addEventListener('mousemove', onMouseMove);
   return () => canvas.removeEventListener('mousemove', onMouseMove);
 }, []);
-
 
 
   // --- File Handler ---
@@ -319,6 +315,11 @@ useEffect(() => {
         });
       }
     }
+      // Markiere Start & Endpunkte, falls möglich
+  if (pts.length > 1) {
+    pts[0].tag = PointTag.START;
+    pts[pts.length - 1].tag = PointTag.END;
+  }
     return pts;
   };
 
