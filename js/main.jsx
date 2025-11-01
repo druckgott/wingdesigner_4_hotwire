@@ -260,6 +260,10 @@ function HotwireWing3D() {
 
     outerPts = window.offsetOuterProfile(outerPts, outerVerticalOffset, outerChordOffset);
 
+    setDebugPoints({ inner: innerPts.map(p => ({x: p.x, y: p.y, tag: p.tag || null })), outer: outerPts.map(p => ({x: p.x, y: p.y, tag: p.tag || null}))});
+
+    //hier weiter bauen
+    
     let [innerWithScaled, outerWithScaled] = window.matchPointCount(innerPts, outerPts);
 
     let innerWithAilerons = innerWithScaled.slice();
@@ -303,7 +307,7 @@ function HotwireWing3D() {
     scene.add(innerLine);
     scene.add(outerLine);
 
-    setDebugPoints({ inner: innerFinal, outer: outerFinal });
+    //setDebugPoints({ inner: innerPts.map(p => ({x: p.x, y: p.y, tag: p.tag || null })), outer: outerPts.map(p => ({x: p.x, y: p.y, tag: p.tag || null}))});
   }, [
     innerDAT, outerDAT, 
     innerScale, outerScale, 

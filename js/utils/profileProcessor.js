@@ -246,12 +246,11 @@ window.trimAirfoilBack = function(points, trimTEmm) {
   return [...upper, ...lower];
 };
 
-// Funktion: Punkte gleichmäßig entlang der Kurve verteilen
 // Funktion: Punkte gleichmäßig entlang der Kurve verteilen (Objekte {x, y})
 window.resampleArcLength = function(points, targetLen) {
   if (!points || points.length < 2 || targetLen < 2) return points;
 
-  // kumulative Abstände berechnen
+  // kumulative Abstände
   const distances = [0];
   for (let i = 1; i < points.length; i++) {
     const dx = points[i].x - points[i - 1].x;
@@ -260,7 +259,12 @@ window.resampleArcLength = function(points, targetLen) {
   }
   const totalLength = distances[distances.length - 1];
 
-  // resample
+  // Originalpunkte mit Tags merken
+  const tagMap = {};
+  points.forEach((p, idx) => {
+    if (p.tag) tagMap[idx] = { x: p.x, y: p.y, tag: p.tag };
+  });
+
   const out = [];
   for (let i = 0; i < targetLen; i++) {
     const t = (i / (targetLen - 1)) * totalLength;
@@ -271,12 +275,27 @@ window.resampleArcLength = function(points, targetLen) {
     const i0 = j - 1;
     const i1 = j;
 
+    // Interpolieren
     const f = (distances[i1] - distances[i0]) === 0 ? 0 : (t - distances[i0]) / (distances[i1] - distances[i0]);
-    const x = points[i0].x * (1 - f) + points[i1].x * f;
-    const y = points[i0].y * (1 - f) + points[i1].y * f;
+    let x = points[i0].x * (1 - f) + points[i1].x * f;
+    let y = points[i0].y * (1 - f) + points[i1].y * f;
+    let tag = null;
 
-    out.push({ x, y });
+    // Tags nur an exakte Originalpunkte setzen
+    if (tagMap[i0] && f === 0) {
+      x = tagMap[i0].x;
+      y = tagMap[i0].y;
+      tag = tagMap[i0].tag;
+    } else if (tagMap[i1] && f === 1) {
+      x = tagMap[i1].x;
+      y = tagMap[i1].y;
+      tag = tagMap[i1].tag;
+    }
+
+    out.push({ x, y, tag });
   }
 
   return out;
 };
+
+

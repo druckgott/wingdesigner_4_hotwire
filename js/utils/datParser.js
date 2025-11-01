@@ -1,7 +1,7 @@
 window.PointTag = {
   PROFILE: "profile",
-  START: "start",
-  END: "end",
+  START: "START_POINT",
+  END: "END_POINT",
   LE: "LE",
   TE: "TE",
   HOLE: "hole",
