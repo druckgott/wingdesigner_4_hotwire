@@ -90,8 +90,13 @@ function HotwireWing3D() {
   useEffect(() => {
     if (!innerDAT || !outerDAT || !sceneRef.current) return;
 
+    // Statt nur parseDAT:
     let innerPts = window.parseDAT(innerDAT);
     let outerPts = window.parseDAT(outerDAT);
+
+    // Resample direkt auf z.B. 200–300 Punkte
+    innerPts = window.resampleArcLength(innerPts, profilePointsCount);
+    outerPts = window.resampleArcLength(outerPts, profilePointsCount);
 
     innerPts = window.scaleProfile(innerPts, innerScale);
     outerPts = window.scaleProfile(outerPts, outerScale);
@@ -146,9 +151,18 @@ function HotwireWing3D() {
 
     setDebugPoints({ inner: innerFinal, outer: outerFinal });
   }, [
-    innerDAT, outerDAT, innerScale, outerScale, span, thicknessScaleInner, thicknessScaleOuter,
-    rotationInner, rotationOuter, outerVerticalOffset, outerChordOffset, holes, ailerons,
-    trimEnabled, trimLEmm, trimTEmm, innerColor, outerColor
+    innerDAT, outerDAT, 
+    innerScale, outerScale, 
+    span, 
+    profilePointsCount,
+    thicknessScaleInner, thicknessScaleOuter,
+    rotationInner, rotationOuter, 
+    outerVerticalOffset, 
+    outerChordOffset, 
+    holes, 
+    ailerons,
+    trimEnabled, trimLEmm, trimTEmm, 
+    innerColor, outerColor
   ]);
 
   const handleFile = (e, setFunc, setName) => {
@@ -165,7 +179,7 @@ function HotwireWing3D() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: 12, height: 'calc(100vh - 60px)', boxSizing: 'border-box' }}>
       <h2>Hotwire Wing 3D Preview</h2>
-      <div style={{ display: 'flex', gap: 12, flex: 1 }}>
+      <div style={{ display: 'flex', gap: 12, flex: 1, minHeight: 0 }}>
         <div style={{ flex: '0 0 500px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div style={{ fontSize: 12, background: '#f7f7f7', padding: 8, border: '1px solid #ccc' }}>
             <b>Kamera:</b> {cameraPosRef.current.x.toFixed(1)}, {cameraPosRef.current.y.toFixed(1)}, {cameraPosRef.current.z.toFixed(1)}<br/>
@@ -180,19 +194,41 @@ function HotwireWing3D() {
             <input type="number" value={span} onChange={e => setSpan(Number(e.target.value))} />
           </label>
 
+          <label>
+            Anzahl Punkte pro Profil
+            <input type="number" value={profilePointsCount} min="10" max="1000" onChange={e => setProfilePointsCount(Number(e.target.value))} />
+            <input type="range" min="10" max="1000" step="1" value={profilePointsCount} onChange={e => setProfilePointsCount(Number(e.target.value))} />
+          </label>
+
           <ProfileBox title="Inner Profil" color={innerColor} isActive={activeTab === 'inner'} onToggle={() => setActiveTab(activeTab === 'inner' ? null : 'inner')}>
             <label>Farbe <input type="color" value={innerColor} onChange={e => setInnerColor(e.target.value)} /></label>
+            
+            <input type="number" value={innerScale} onChange={e => setInnerScale(Number(e.target.value))} />
             <label>Länge (mm) <input type="range" min="10" max="1000" value={innerScale} onChange={e => setInnerScale(Number(e.target.value))} /></label>
+            
+            <input type="number" step="0.01" min="0.5" max="1.5" value={thicknessScaleInner} onChange={e => setThicknessScaleInner(Number(e.target.value))} />
             <label>Dicke <input type="range" min="0.5" max="1.5" step="0.01" value={thicknessScaleInner} onChange={e => setThicknessScaleInner(Number(e.target.value))} /></label>
+            
+            <input type="number" step="1" min="-25" max="25" value={rotationInner * 180 / Math.PI} onChange={e => setRotationInner(Number(e.target.value) * Math.PI / 180)} />
             <label>Rotation (°) <input type="range" min="-25" max="25" value={rotationInner * 180 / Math.PI} onChange={e => setRotationInner(e.target.value * Math.PI / 180)} /></label>
           </ProfileBox>
 
           <ProfileBox title="Outer Profil" color={outerColor} isActive={activeTab === 'outer'} onToggle={() => setActiveTab(activeTab === 'outer' ? null : 'outer')}>
             <label>Farbe <input type="color" value={outerColor} onChange={e => setOuterColor(e.target.value)} /></label>
+            
+            <input type="number" value={outerScale} onChange={e => setOuterScale(Number(e.target.value))} />
             <label>Länge (mm) <input type="range" min="10" max="1000" value={outerScale} onChange={e => setOuterScale(Number(e.target.value))} /></label>
+            
+            <input type="number" step="0.01" min="0.5" max="1.5" value={thicknessScaleOuter} onChange={e => setThicknessScaleOuter(Number(e.target.value))} />
             <label>Dicke <input type="range" min="0.5" max="1.5" step="0.01" value={thicknessScaleOuter} onChange={e => setThicknessScaleOuter(Number(e.target.value))} /></label>
+            
+            <input type="number" step="1" min="-25" max="25" value={rotationOuter * 180 / Math.PI} onChange={e => setRotationOuter(Number(e.target.value) * Math.PI / 180)} />
             <label>Rotation (°) <input type="range" min="-25" max="25" value={rotationOuter * 180 / Math.PI} onChange={e => setRotationOuter(e.target.value * Math.PI / 180)} /></label>
+            
+            <input type="number" value={outerVerticalOffset} onChange={e => setOuterVerticalOffset(Number(e.target.value))} />
             <label>Vertikal (mm) <input type="range" min="-500" max="500" value={outerVerticalOffset} onChange={e => setOuterVerticalOffset(Number(e.target.value))} /></label>
+            
+            <input type="number" value={outerChordOffset} onChange={e => setOuterChordOffset(Number(e.target.value))} />
             <label>Chord (mm) <input type="range" min="-1000" max="1000" value={outerChordOffset} onChange={e => setOuterChordOffset(Number(e.target.value))} /></label>
           </ProfileBox>
 

@@ -245,3 +245,38 @@ window.trimAirfoilBack = function(points, trimTEmm) {
   }
   return [...upper, ...lower];
 };
+
+// Funktion: Punkte gleichmäßig entlang der Kurve verteilen
+// Funktion: Punkte gleichmäßig entlang der Kurve verteilen (Objekte {x, y})
+window.resampleArcLength = function(points, targetLen) {
+  if (!points || points.length < 2 || targetLen < 2) return points;
+
+  // kumulative Abstände berechnen
+  const distances = [0];
+  for (let i = 1; i < points.length; i++) {
+    const dx = points[i].x - points[i - 1].x;
+    const dy = points[i].y - points[i - 1].y;
+    distances.push(distances[i - 1] + Math.hypot(dx, dy));
+  }
+  const totalLength = distances[distances.length - 1];
+
+  // resample
+  const out = [];
+  for (let i = 0; i < targetLen; i++) {
+    const t = (i / (targetLen - 1)) * totalLength;
+
+    // Segment finden
+    let j = 1;
+    while (j < distances.length && distances[j] < t) j++;
+    const i0 = j - 1;
+    const i1 = j;
+
+    const f = (distances[i1] - distances[i0]) === 0 ? 0 : (t - distances[i0]) / (distances[i1] - distances[i0]);
+    const x = points[i0].x * (1 - f) + points[i1].x * f;
+    const y = points[i0].y * (1 - f) + points[i1].y * f;
+
+    out.push({ x, y });
+  }
+
+  return out;
+};
