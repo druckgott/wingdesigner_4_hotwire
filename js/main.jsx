@@ -1,173 +1,210 @@
 const { useState, useEffect, useRef } = React;
 
 function HotwireWing3D() {
-    // Wing States
-    const [innerDAT, setInnerDAT] = useState("");
-    const [innerName, setInnerName] = useState("clarky.dat");
-    const [innerColor, setInnerColor] = useState("#ff0000");
-    const [innerScale, setInnerScale] = useState(100);
-    const [thicknessScaleInner, setThicknessScaleInner] = useState(1.0);
-    const [rotationInner, setRotationInner] = useState(0);
+  const [innerDAT, setInnerDAT] = useState("");
+  const [innerName, setInnerName] = useState("clarky.dat");
+  const [innerColor, setInnerColor] = useState("#ff0000");
+  const [innerScale, setInnerScale] = useState(100);
+  const [thicknessScaleInner, setThicknessScaleInner] = useState(1.0);
+  const [rotationInner, setRotationInner] = useState(0);
 
-    const [outerDAT, setOuterDAT] = useState("");
-    const [outerName, setOuterName] = useState("clarky.dat");
-    const [outerColor, setOuterColor] = useState("#0000ff");
-    const [outerScale, setOuterScale] = useState(120);
-    const [thicknessScaleOuter, setThicknessScaleOuter] = useState(1.0);
-    const [rotationOuter, setRotationOuter] = useState(0);
-    const [outerVerticalOffset, setOuterVerticalOffset] = useState(0);
-    const [outerChordOffset, setOuterChordOffset] = useState(0);
+  const [outerDAT, setOuterDAT] = useState("");
+  const [outerName, setOuterName] = useState("clarky.dat");
+  const [outerColor, setOuterColor] = useState("#0000ff");
+  const [outerScale, setOuterScale] = useState(120);
+  const [thicknessScaleOuter, setThicknessScaleOuter] = useState(1.0);
+  const [rotationOuter, setRotationOuter] = useState(0);
+  const [outerVerticalOffset, setOuterVerticalOffset] = useState(0);
+  const [outerChordOffset, setOuterChordOffset] = useState(0);
 
-    // General Parameters
-    const [span, setSpan] = useState(500);
-    const [profilePointsCount, setProfilePointsCount] = useState(300);
-    const [holes, setHoles] = useState([{ diameter: 5, xPercent: 0.5, yPercent: 0.5, nPoints: 30 }]);
-    const [ailerons, setAilerons] = useState([{thicknessTop: 2, xPercent: 0.7, frontAngleDeg: 15, rearAngleDeg: 15}]);
+  const [span, setSpan] = useState(500);
+  const [profilePointsCount, setProfilePointsCount] = useState(300);
+  const [holes, setHoles] = useState([{ diameter: 5, xPercent: 0.5, yPercent: 0.5, nPoints: 30 }]);
+  const [ailerons, setAilerons] = useState([{ thicknessTop: 2, xPercent: 0.7, frontAngleDeg: 15, rearAngleDeg: 15 }]);
+  const [trimEnabled, setTrimEnabled] = useState(false);
+  const [trimLEmm, setTrimLEmm] = useState(0);
+  const [trimTEmm, setTrimTEmm] = useState(0);
 
-    // Trim
-    const [trimEnabled, setTrimEnabled] = useState(false);
-    const [trimLEmm, setTrimLEmm] = useState(0);
-    const [trimTEmm, setTrimTEmm] = useState(0);
+  const [activeTab, setActiveTab] = useState(null);
+  const [debugOpen, setDebugOpen] = useState(false);
+  const [debugPoints, setDebugPoints] = useState({ inner: [], outer: [] });
 
-    // UI State
-    const [activeTab, setActiveTab] = useState(null);
-    const [debugOpen, setDebugOpen] = useState(false);
-    const [debugPoints, setDebugPoints] = useState({ inner: [], outer: [] });
+  const canvasRef = useRef(null);
+  const sceneRef = useRef(null);
+  const cameraRef = useRef(null);
+  const rendererRef = useRef(null);
+  const controlsRef = useRef(null);
+  const cameraPosRef = useRef({ x: 0, y: 0, z: 0 });
+  const cameraTargetRef = useRef({ x: 0, y: 0, z: 0 });
 
-    // Camera State
-    const [cameraPos, setCameraPos] = useState({x:0,y:0,z:0});
-    const [cameraTarget, setCameraTarget] = useState({x:0,y:0,z:0});
+  useEffect(() => {
+    fetch('airfoil/clarky.dat')
+      .then(res => res.text())
+      .then(text => {
+        setInnerDAT(text);
+        setOuterDAT(text);
+        setInnerName("clarky.dat");
+        setOuterName("clarky.dat");
+      });
+  }, []);
 
-    // Refs
-    const canvasRef = useRef(null);
-    const tooltipRef = useRef(null);
-    const cameraPosRef = useRef({x:0,y:0,z:0});
-    const cameraTargetRef = useRef({x:0,y:0,z:0});
+  useEffect(() => {
+    if (!canvasRef.current) return;
+    const width = canvasRef.current.clientWidth;
+    const height = canvasRef.current.clientHeight;
 
-    // Load Default DAT
-    useEffect(() => {
-        fetch('airfoil/clarky.dat')
-            .then(res => res.text())
-            .then(text => {
-                setInnerDAT(text);
-                setOuterDAT(text);
-                setInnerName("clarky.dat");
-                setOuterName("clarky.dat");
-            })
-            .catch(err => console.log("Default DAT konnte nicht geladen werden", err));
-    }, []);
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xf0f0f0);
+    sceneRef.current = scene;
 
-    // Update Camera Display
-    useEffect(() => {
-        const interval = setInterval(() => {
-            setCameraPos({...cameraPosRef.current});
-            setCameraTarget({...cameraTargetRef.current});
-        }, 200);
-        return () => clearInterval(interval);
-    }, []);
+    const camera = new THREE.PerspectiveCamera(45, width / height, 1, 10000);
+    camera.position.set(600, -span/2, span);
+    camera.up.set(0, 0, 1);
+    camera.lookAt(0, 0, 0);
+    cameraRef.current = camera;
 
-    // Initialize Three.js Scene
-    useEffect(() => {
-        if (!canvasRef.current) return;
-        
-        const sceneSetup = window.initThreeScene(canvasRef, span, cameraPosRef, cameraTargetRef);
-        window.setupMouseInteraction(
-            canvasRef, 
-            tooltipRef, 
-            cameraPosRef, 
-            cameraTargetRef,
-            sceneSetup.scene,
-            sceneSetup.camera,
-            sceneSetup.controls
-        );
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(width, height);
+    canvasRef.current.appendChild(renderer.domElement);
+    rendererRef.current = renderer;
 
-        return () => {
-            if (sceneSetup.renderer) sceneSetup.renderer.dispose();
-        };
-    }, [span]);
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controlsRef.current = controls;
+    controls.enableDamping = true;
 
-    // File Handler
-    const handleFile = (e, setFunc, setName) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = ev => {
-            setFunc(ev.target.result);
-            setName(file.name);
-        };
-        reader.readAsText(file);
+    const axes = new THREE.AxesHelper(span);
+    scene.add(axes);
+
+    const animate = () => {
+      requestAnimationFrame(animate);
+      controls.update();
+      cameraPosRef.current = { x: camera.position.x, y: camera.position.y, z: camera.position.z };
+      cameraTargetRef.current = { x: controls.target.x, y: controls.target.y, z: controls.target.z };
+      renderer.render(scene, camera);
     };
+    animate();
 
-    // Update 3D Lines when parameters change
-    useEffect(() => {
-        if (!innerDAT || !outerDAT) return;
+    return () => renderer.dispose();
+  }, []);
 
-        let innerPts = window.parseDAT(innerDAT);
-        let outerPts = window.parseDAT(outerDAT);
+  useEffect(() => {
+    if (!innerDAT || !outerDAT || !sceneRef.current) return;
 
-        innerPts = window.scaleProfile(innerPts, innerScale);
-        outerPts = window.scaleProfile(outerPts, outerScale);
+    let innerPts = window.parseDAT(innerDAT);
+    let outerPts = window.parseDAT(outerDAT);
 
-        const innerPtsScaled = innerPts.map(p => ({...p, y: p.y * thicknessScaleInner}));
-        const outerPtsScaled = outerPts.map(p => ({...p, y: p.y * thicknessScaleOuter}));
+    innerPts = window.scaleProfile(innerPts, innerScale);
+    outerPts = window.scaleProfile(outerPts, outerScale);
 
-        const outerPtsOffset = window.offsetOuterProfile(outerPtsScaled, outerVerticalOffset, outerChordOffset);
+    innerPts = innerPts.map(p => ({ ...p, y: p.y * thicknessScaleInner }));
+    outerPts = outerPts.map(p => ({ ...p, y: p.y * thicknessScaleOuter }));
 
-        let innerWithScaled = innerPtsScaled.slice();
-        let outerWithScaled = outerPtsOffset.slice();
+    outerPts = window.offsetOuterProfile(outerPts, outerVerticalOffset, outerChordOffset);
 
-        [innerWithScaled, outerWithScaled] = window.matchPointCount(innerWithScaled, outerWithScaled);
+    let [innerWithScaled, outerWithScaled] = window.matchPointCount(innerPts, outerPts);
 
-        let innerWithAilerons = window.smoothProfile(innerWithScaled, 2);
-        let outerWithAilerons = window.smoothProfile(outerWithScaled, 2);
+    let innerWithAilerons = innerWithScaled.slice();
+    let outerWithAilerons = outerWithScaled.slice();
 
-        ailerons.forEach(a => {
-            innerWithAilerons = window.addBottomPath(innerWithAilerons, a.xPercent, a.thicknessTop, a.frontAngleDeg, a.rearAngleDeg);
-            outerWithAilerons = window.addBottomPath(outerWithAilerons, a.xPercent, a.thicknessTop, a.frontAngleDeg, a.rearAngleDeg);
-        });
+    ailerons.forEach(a => {
+      innerWithAilerons = window.addBottomPath(innerWithAilerons, a.xPercent, a.thicknessTop, a.frontAngleDeg, a.rearAngleDeg);
+      outerWithAilerons = window.addBottomPath(outerWithAilerons, a.xPercent, a.thicknessTop, a.frontAngleDeg, a.rearAngleDeg);
+    });
 
-        let innerWithHoles = innerWithAilerons.slice();
-        let outerWithHoles = outerWithAilerons.slice();
+    let innerWithHoles = innerWithAilerons.slice();
+    let outerWithHoles = outerWithAilerons.slice();
 
-        holes.forEach(h => {
-            const holePtsInner = window.getHolePoints(h.diameter, h.xPercent, h.yPercent, innerWithHoles, h.nPoints);
-            innerWithHoles = window.insertHoleWithInOut(innerWithHoles, holePtsInner, 3);
+    holes.forEach(h => {
+      const holeInner = window.getHolePoints(h.diameter, h.xPercent, h.yPercent, innerWithHoles, h.nPoints);
+      innerWithHoles = window.insertHoleWithInOut(innerWithHoles, holeInner, 3);
+      const holeOuter = window.getHolePoints(h.diameter, h.xPercent, h.yPercent, outerWithHoles, h.nPoints);
+      outerWithHoles = window.insertHoleWithInOut(outerWithHoles, holeOuter, 3);
+    });
 
-            const holePtsOuter = window.getHolePoints(h.diameter, h.xPercent, h.yPercent, outerWithHoles, h.nPoints);
-            outerWithHoles = window.insertHoleWithInOut(outerWithHoles, holePtsOuter, 3);
-        });
+    let innerTrimmed = innerWithHoles;
+    let outerTrimmed = outerWithHoles;
+    if (trimEnabled) {
+      innerTrimmed = window.trimAirfoilFront(innerTrimmed, trimLEmm);
+      outerTrimmed = window.trimAirfoilFront(outerTrimmed, trimLEmm);
+      innerTrimmed = window.trimAirfoilBack(innerTrimmed, trimTEmm);
+      outerTrimmed = window.trimAirfoilBack(outerTrimmed, trimTEmm);
+    }
 
-        if (trimEnabled) {
-            innerWithHoles = window.trimAirfoilFront(innerWithHoles, trimLEmm) || innerWithHoles;
-            outerWithHoles = window.trimAirfoilFront(outerWithHoles, trimLEmm) || outerWithHoles;
-            innerWithHoles = window.trimAirfoilBack(innerWithHoles, trimTEmm) || innerWithHoles;
-            outerWithHoles = window.trimAirfoilBack(outerWithHoles, trimTEmm) || outerWithHoles;
-        }
+    const innerFinal = innerTrimmed.map(p => window.rotatePoint(p, rotationInner));
+    const outerFinal = outerTrimmed.map(p => window.rotatePoint(p, rotationOuter));
 
-        const innerPtsRotated = innerWithHoles.map(pt => window.rotatePoint(pt, rotationInner));
-        const outerPtsRotated = outerWithHoles.map(pt => window.rotatePoint(pt, rotationOuter));
+    const scene = sceneRef.current;
+    if (scene.lines && scene.lines.innerLine) scene.remove(scene.lines.innerLine);
+    if (scene.lines && scene.lines.outerLine) scene.remove(scene.lines.outerLine);
 
-        setDebugPoints({ inner: innerPtsRotated, outer: outerPtsRotated });
+    const innerLine = window.createLine(innerFinal, -span / 2, parseInt(innerColor.slice(1), 16));
+    const outerLine = window.createLine(outerFinal, span / 2, parseInt(outerColor.slice(1), 16));
 
-        if (canvasRef.current && canvasRef.current.scene) {
-            canvasRef.current.scene.lines = {
-                innerLine: window.createLine(innerPtsRotated, -span / 2, parseInt(innerColor.replace("#","0x"),16)),
-                outerLine: window.createLine(outerPtsRotated, span / 2, parseInt(outerColor.replace("#","0x"),16))
-            };
-        }
-    }, [
-        innerDAT, outerDAT, innerScale, outerScale, span, thicknessScaleInner, 
-        thicknessScaleOuter, rotationInner, rotationOuter, outerVerticalOffset, 
-        outerChordOffset, holes, profilePointsCount, ailerons, innerColor, 
-        outerColor, trimEnabled, trimLEmm, trimTEmm
-    ]);
+    scene.lines = { innerLine, outerLine };
+    scene.add(innerLine);
+    scene.add(outerLine);
 
-    return (
-        <div className="main-container">
-            {/* ... dein JSX bleibt unverändert ... */}
+    setDebugPoints({ inner: innerFinal, outer: outerFinal });
+  }, [
+    innerDAT, outerDAT, innerScale, outerScale, span, thicknessScaleInner, thicknessScaleOuter,
+    rotationInner, rotationOuter, outerVerticalOffset, outerChordOffset, holes, ailerons,
+    trimEnabled, trimLEmm, trimTEmm, innerColor, outerColor
+  ]);
+
+  const handleFile = (e, setFunc, setName) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      setFunc(ev.target.result);
+      setName(file.name);
+    };
+    reader.readAsText(file);
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: 12, height: 'calc(100vh - 60px)', boxSizing: 'border-box' }}>
+      <h2>Hotwire Wing 3D Preview</h2>
+      <div style={{ display: 'flex', gap: 12, flex: 1 }}>
+        <div style={{ flex: '0 0 500px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ fontSize: 12, background: '#f7f7f7', padding: 8, border: '1px solid #ccc' }}>
+            <b>Kamera:</b> {cameraPosRef.current.x.toFixed(1)}, {cameraPosRef.current.y.toFixed(1)}, {cameraPosRef.current.z.toFixed(1)}<br/>
+            <b>Ziel:</b> {cameraTargetRef.current.x.toFixed(1)}, {cameraTargetRef.current.y.toFixed(1)}, {cameraTargetRef.current.z.toFixed(1)}
+          </div>
+
+          <label>Inner DAT <input type="file" accept=".dat" onChange={e => handleFile(e, setInnerDAT, setInnerName)} /> {innerName}</label>
+          <label>Outer DAT <input type="file" accept=".dat" onChange={e => handleFile(e, setOuterDAT, setOuterName)} /> {outerName}</label>
+
+          <label>Spannweite (mm)
+            <input type="range" min="10" max="3000" value={span} onChange={e => setSpan(Number(e.target.value))} />
+            <input type="number" value={span} onChange={e => setSpan(Number(e.target.value))} />
+          </label>
+
+          <ProfileBox title="Inner Profil" color={innerColor} isActive={activeTab === 'inner'} onToggle={() => setActiveTab(activeTab === 'inner' ? null : 'inner')}>
+            <label>Farbe <input type="color" value={innerColor} onChange={e => setInnerColor(e.target.value)} /></label>
+            <label>Länge (mm) <input type="range" min="10" max="1000" value={innerScale} onChange={e => setInnerScale(Number(e.target.value))} /></label>
+            <label>Dicke <input type="range" min="0.5" max="1.5" step="0.01" value={thicknessScaleInner} onChange={e => setThicknessScaleInner(Number(e.target.value))} /></label>
+            <label>Rotation (°) <input type="range" min="-25" max="25" value={rotationInner * 180 / Math.PI} onChange={e => setRotationInner(e.target.value * Math.PI / 180)} /></label>
+          </ProfileBox>
+
+          <ProfileBox title="Outer Profil" color={outerColor} isActive={activeTab === 'outer'} onToggle={() => setActiveTab(activeTab === 'outer' ? null : 'outer')}>
+            <label>Farbe <input type="color" value={outerColor} onChange={e => setOuterColor(e.target.value)} /></label>
+            <label>Länge (mm) <input type="range" min="10" max="1000" value={outerScale} onChange={e => setOuterScale(Number(e.target.value))} /></label>
+            <label>Dicke <input type="range" min="0.5" max="1.5" step="0.01" value={thicknessScaleOuter} onChange={e => setThicknessScaleOuter(Number(e.target.value))} /></label>
+            <label>Rotation (°) <input type="range" min="-25" max="25" value={rotationOuter * 180 / Math.PI} onChange={e => setRotationOuter(e.target.value * Math.PI / 180)} /></label>
+            <label>Vertikal (mm) <input type="range" min="-500" max="500" value={outerVerticalOffset} onChange={e => setOuterVerticalOffset(Number(e.target.value))} /></label>
+            <label>Chord (mm) <input type="range" min="-1000" max="1000" value={outerChordOffset} onChange={e => setOuterChordOffset(Number(e.target.value))} /></label>
+          </ProfileBox>
+
+          <HolesSection holes={holes} setHoles={setHoles} isActive={activeTab === 'holes'} onToggle={() => setActiveTab(activeTab === 'holes' ? null : 'holes')} />
+          <AileronsSection ailerons={ailerons} setAilerons={setAilerons} isActive={activeTab === 'ailerons'} onToggle={() => setActiveTab(activeTab === 'ailerons' ? null : 'ailerons')} />
+          <TrimSection trimEnabled={trimEnabled} setTrimEnabled={setTrimEnabled} trimLEmm={trimLEmm} setTrimLEmm={setTrimLEmm} trimTEmm={trimTEmm} setTrimTEmm={setTrimTEmm} isActive={activeTab === 'trim'} onToggle={() => setActiveTab(activeTab === 'trim' ? null : 'trim')} />
+          <DebugSection debugPoints={debugPoints} innerName={innerName} outerName={outerName} isOpen={debugOpen} onToggle={() => setDebugOpen(!debugOpen)} />
         </div>
-    );
+        <div ref={canvasRef} style={{ flex: 1, minHeight: 0 }}></div>
+      </div>
+    </div>
+  );
 }
 
-// Render App mit React 18
 ReactDOM.createRoot(document.getElementById('root')).render(<HotwireWing3D />);
