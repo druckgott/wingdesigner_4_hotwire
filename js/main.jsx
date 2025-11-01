@@ -36,7 +36,13 @@ function HotwireWing3D() {
   const controlsRef = useRef(null);
   const cameraPosRef = useRef({ x: 0, y: 0, z: 0 });
   const cameraTargetRef = useRef({ x: 0, y: 0, z: 0 });
+  const tooltipRef = useRef(null);
+  const markerRef = useRef(null);  // der Marker für den aktuell gewählten Punkt
 
+  const [cameraPos, setCameraPos] = useState({x:0,y:0,z:0});
+  const [cameraTarget, setCameraTarget] = useState({x:0,y:0,z:0});
+
+  
   useEffect(() => {
     fetch('airfoil/clarky.dat')
       .then(res => res.text())
@@ -48,44 +54,193 @@ function HotwireWing3D() {
       });
   }, []);
 
+  // --- Kamera-Position alle 200ms im State aktualisieren ---
+  useEffect(() => {
+    const iv = setInterval(() => {
+      setCameraPos({ ...cameraPosRef.current });
+      setCameraTarget({ ...cameraTargetRef.current });
+    }, 200);
+    return () => clearInterval(iv);
+  }, []);
+
+  // --- 3D Setup: Szene, Kamera, Renderer, OrbitControls ---
   useEffect(() => {
     if (!canvasRef.current) return;
+
     const width = canvasRef.current.clientWidth;
     const height = canvasRef.current.clientHeight;
 
+    // Szene
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0xf0f0f0);
     sceneRef.current = scene;
 
+    // Kamera
     const camera = new THREE.PerspectiveCamera(45, width / height, 1, 10000);
-    camera.position.set(600, -span/2, span);
+    camera.position.set(600, -span / 2, span);
     camera.up.set(0, 0, 1);
     camera.lookAt(0, 0, 0);
     cameraRef.current = camera;
 
+    // Renderer
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(width, height);
+    canvasRef.current.innerHTML = ""; // leere vorherige Inhalte
     canvasRef.current.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
+    // OrbitControls
     const controls = new THREE.OrbitControls(camera, renderer.domElement);
-    controlsRef.current = controls;
     controls.enableDamping = true;
+    controls.dampingFactor = 0.1;
+    controls.enableZoom = true;
+    controls.enablePan = true;
+    controls.target.set(0, 0, 0);
+    controlsRef.current = controls;
 
+    // Achsenhilfe
     const axes = new THREE.AxesHelper(span);
     scene.add(axes);
 
+    // Marker als Sprite (z.B. für Maus-/Tag-Markierung)
+    const material = new THREE.SpriteMaterial({ color: 0x000000 });
+    const sprite = new THREE.Sprite(material);
+    sprite.scale.set(10, 10, 1);
+    sprite.visible = false;
+    scene.add(sprite);
+    markerRef.current = sprite;
+
+    // Linien-Platzhalter
+    scene.lines = { innerLine: null, outerLine: null };
+
+    // Animation
+    let reqId;
     const animate = () => {
-      requestAnimationFrame(animate);
+      reqId = requestAnimationFrame(animate);
       controls.update();
-      cameraPosRef.current = { x: camera.position.x, y: camera.position.y, z: camera.position.z };
-      cameraTargetRef.current = { x: controls.target.x, y: controls.target.y, z: controls.target.z };
+
+      // Kamera/Target Refs updaten
+      cameraPosRef.current.x = camera.position.x;
+      cameraPosRef.current.y = camera.position.y;
+      cameraPosRef.current.z = camera.position.z;
+
+      cameraTargetRef.current.x = controls.target.x;
+      cameraTargetRef.current.y = controls.target.y;
+      cameraTargetRef.current.z = controls.target.z;
+
       renderer.render(scene, camera);
     };
     animate();
 
-    return () => renderer.dispose();
+    // Resize Handling
+    const handleResize = () => {
+      const w = canvasRef.current.clientWidth;
+      const h = canvasRef.current.clientHeight;
+      renderer.setSize(w, h);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+    };
+    window.addEventListener("resize", handleResize);
+
+    // Cleanup
+    return () => {
+      cancelAnimationFrame(reqId);
+      controls.dispose();
+      renderer.dispose();
+      scene.clear();
+      window.removeEventListener("resize", handleResize);
+    };
   }, []);
+
+  useEffect(() => {
+    const initCanvas = () => {
+      if (!canvasRef.current) return;
+      const width = canvasRef.current.clientWidth;
+      const height = canvasRef.current.clientHeight;
+      if (width === 0 || height === 0) return;
+
+      // Three.js Setup hier
+    };
+
+    initCanvas(); // erstmal versuchen
+    window.addEventListener('resize', initCanvas);
+
+    return () => window.removeEventListener('resize', initCanvas);
+  }, []);
+
+
+  useEffect(() => {
+    if (!rendererRef.current || !sceneRef.current || !tooltipRef.current) return;
+
+    const scene = sceneRef.current;
+    const camera = cameraRef.current;
+    const renderer = rendererRef.current;
+    const tooltip = tooltipRef.current;
+    const canvas = renderer.domElement;
+
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+
+    const handleMouseMove = (event) => {
+      const rect = canvas.getBoundingClientRect();
+      mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+      raycaster.setFromCamera(mouse, camera);
+
+      const lines = [];
+      if (scene.lines) {
+        if (scene.lines.innerLine) lines.push(scene.lines.innerLine);
+        if (scene.lines.outerLine) lines.push(scene.lines.outerLine);
+      }
+
+      if (lines.length === 0) {
+        tooltip.style.display = "none";
+        return;
+      }
+
+      let closestPoint = null;
+      let minDist = Infinity;
+      let closestIndex = -1;
+      let closestTag = null;
+
+      lines.forEach(line => {
+        const positions = line.geometry.attributes.position.array;
+        const tags = (line.geometry.attributes.tag && line.geometry.attributes.tag.array) || [];
+
+        for (let i = 0; i < positions.length; i += 3) {
+          const vertex = new THREE.Vector3(positions[i], positions[i + 1], positions[i + 2]);
+          const projected = vertex.clone().project(camera);
+          const screenX = (projected.x + 1) / 2 * rect.width;
+          const screenY = (-projected.y + 1) / 2 * rect.height;
+          const dx = screenX - (event.clientX - rect.left);
+          const dy = screenY - (event.clientY - rect.top);
+          const dist = Math.sqrt(dx*dx + dy*dy);
+
+          if (dist < minDist && dist < 10) {
+            minDist = dist;
+            closestPoint = vertex;
+            closestIndex = i / 3;
+            closestTag = tags[i / 3] !== undefined ? tags[i / 3] : null;
+          }
+        }
+      });
+
+      if (closestPoint) {
+        tooltip.style.display = "block";
+        tooltip.style.left = event.clientX + 10 + "px";
+        tooltip.style.top = event.clientY + 10 + "px";
+        tooltip.innerText = `Index: ${closestIndex}\nx: ${closestPoint.x.toFixed(1)}, y: ${closestPoint.y.toFixed(1)}, z: ${closestPoint.z.toFixed(1)}` +
+                            (closestTag !== null ? `\nTag: ${closestTag}` : "");
+      } else {
+        tooltip.style.display = "none";
+      }
+    };
+
+    canvas.addEventListener("mousemove", handleMouseMove);
+    return () => canvas.removeEventListener("mousemove", handleMouseMove);
+  }, [sceneRef.current, rendererRef.current, cameraRef.current]);
+
 
   useEffect(() => {
     if (!innerDAT || !outerDAT || !sceneRef.current) return;
@@ -237,7 +392,10 @@ function HotwireWing3D() {
           <TrimSection trimEnabled={trimEnabled} setTrimEnabled={setTrimEnabled} trimLEmm={trimLEmm} setTrimLEmm={setTrimLEmm} trimTEmm={trimTEmm} setTrimTEmm={setTrimTEmm} isActive={activeTab === 'trim'} onToggle={() => setActiveTab(activeTab === 'trim' ? null : 'trim')} />
           <DebugSection debugPoints={debugPoints} innerName={innerName} outerName={outerName} isOpen={debugOpen} onToggle={() => setDebugOpen(!debugOpen)} />
         </div>
-        <div ref={canvasRef} style={{ flex: 1, minHeight: 0 }}></div>
+        {/* Rechte Canvas-Box */}
+        <div ref={canvasRef} id="canvas-container" style={{flex: 1, minHeight: 0, maxHeight: 'calc(100vh - 160px)',  overflow: 'hidden' }}></div>
+        {/* Canvas-Box TooltiipRef */}
+        <div ref={tooltipRef} style={{ position:'absolute', padding:'4px 6px', background:'#000', color:'#fff', borderRadius:4, pointerEvents:'none', display:'none', fontSize:12 }}></div>
       </div>
     </div>
   );
