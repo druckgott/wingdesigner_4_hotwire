@@ -376,18 +376,28 @@ lines.forEach(line => {
       <h2>Hotwire Wing 3D Preview</h2>
       <div style={{ display: 'flex', gap: 12, flex: 1, minHeight: 0 }}>
         {/* Left Canvas-Box */}
-        <LeftPanel 
+        <LeftPanel
           cameraPosRef={cameraPosRef} cameraTargetRef={cameraTargetRef}
-          innerDAT={innerDAT} outerDAT={outerDAT} innerName={innerName} outerName={outerName} handleFile={handleFile}
-          span={span} setSpan={setSpan} profilePointsCount={profilePointsCount} setProfilePointsCount={setProfilePointsCount}
+          innerDAT={innerDAT} setInnerDAT={setInnerDAT}
+          outerDAT={outerDAT} setOuterDAT={setOuterDAT}
+          innerName={innerName} setInnerName={setInnerName}
+          outerName={outerName} setOuterName={setOuterName}
+          handleFile={handleFile}
+          span={span} setSpan={setSpan} 
+          profilePointsCount={profilePointsCount} setProfilePointsCount={setProfilePointsCount}
           innerColor={innerColor} setInnerColor={setInnerColor} innerScale={innerScale} setInnerScale={setInnerScale} 
-          thicknessScaleInner={thicknessScaleInner} setThicknessScaleInner={setThicknessScaleInner} rotationInner={rotationInner} setRotationInner={setRotationInner}
+          thicknessScaleInner={thicknessScaleInner} setThicknessScaleInner={setThicknessScaleInner} 
+          rotationInner={rotationInner} setRotationInner={setRotationInner}
           outerColor={outerColor} setOuterColor={setOuterColor} outerScale={outerScale} setOuterScale={setOuterScale} 
-          thicknessScaleOuter={thicknessScaleOuter} setThicknessScaleOuter={setThicknessScaleOuter} rotationOuter={rotationOuter} setRotationOuter={setRotationOuter}
-          outerVerticalOffset={outerVerticalOffset} setOuterVerticalOffset={setOuterVerticalOffset} outerChordOffset={outerChordOffset} setOuterChordOffset={setOuterChordOffset}
+          thicknessScaleOuter={thicknessScaleOuter} setThicknessScaleOuter={setThicknessScaleOuter} 
+          rotationOuter={rotationOuter} setRotationOuter={setRotationOuter}
+          outerVerticalOffset={outerVerticalOffset} setOuterVerticalOffset={setOuterVerticalOffset} 
+          outerChordOffset={outerChordOffset} setOuterChordOffset={setOuterChordOffset}
           holes={holes} setHoles={setHoles} ailerons={ailerons} setAilerons={setAilerons}
-          trimEnabled={trimEnabled} setTrimEnabled={setTrimEnabled} trimLEmm={trimLEmm} setTrimLEmm={setTrimLEmm} trimTEmm={trimTEmm} setTrimTEmm={setTrimTEmm}
-          activeTab={activeTab} setActiveTab={setActiveTab} debugOpen={debugOpen} setDebugOpen={setDebugOpen} debugPoints={debugPoints}
+          trimEnabled={trimEnabled} setTrimEnabled={setTrimEnabled} 
+          trimLEmm={trimLEmm} setTrimLEmm={setTrimLEmm} trimTEmm={trimTEmm} setTrimTEmm={setTrimTEmm}
+          activeTab={activeTab} setActiveTab={setActiveTab} 
+          debugOpen={debugOpen} setDebugOpen={setDebugOpen} debugPoints={debugPoints}
         />
         {/* Rechte Canvas-Box */}
         <div ref={canvasRef} id="canvas-container" style={{flex: 1, minHeight: 0, maxHeight: 'calc(100vh - 160px)',  overflow: 'hidden' }}></div>
