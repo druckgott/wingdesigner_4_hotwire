@@ -343,7 +343,7 @@ window.trimAirfoilBack = function(points, trimTEmm) {
     if (p.x <= xLimit) upper.push({ ...p });
     if (!upperDone && p.y > 0 && points[i+1]?.x <= xLimit) {
       const yProfile = interpY(points[i+1], p, xLimit);
-      upper.push({ x: xLimit, y: points[0].y });
+      upper.push({ x: xLimit, y: points[0].y, tag: "START_POINT" });
       upper.push({ x: xLimit, y: yProfile });
       upperDone = true;
     }
@@ -355,7 +355,7 @@ window.trimAirfoilBack = function(points, trimTEmm) {
     if (!lowerDone && p.y < 0 && points[i-1]?.x <= xLimit) {
       const yProfile = interpY(p, points[i-1], xLimit);
       lower.push({ x: xLimit, y: yProfile });
-      lower.push({ x: xLimit, y: points[0].y });
+      lower.push({ x: xLimit, y: points[0].y, tag: "END_POINT" });
       lowerDone = true;
     }
   }
@@ -363,7 +363,7 @@ window.trimAirfoilBack = function(points, trimTEmm) {
 };
 
 // Funktion: Punkte gleichmäßig entlang der Kurve verteilen (Objekte {x, y})
-window.resampleArcLength = function(points, targetLen) {
+/*window.resampleArcLength = function(points, targetLen) {
   if (!points || points.length < 2 || targetLen < 2) return points;
 
   // kumulative Abstände
@@ -412,6 +412,113 @@ window.resampleArcLength = function(points, targetLen) {
   }
 
   return out;
-};
+};*/
 
+window.resampleArcLength = function(points, targetLen) {
+  if (!points || points.length < 2 || targetLen < 2) return points;
+
+  // 1) kumulative Abstände
+  const distances = [0];
+  for (let i = 1; i < points.length; i++) {
+    const dx = points[i].x - points[i - 1].x;
+    const dy = points[i].y - points[i - 1].y;
+    distances.push(distances[i - 1] + Math.hypot(dx, dy));
+  }
+  const totalLength = distances[distances.length - 1] || 1;
+
+  // 2) Berechne gewünschte Abstände (target distances) für jeden Output-Index
+  const targetDistances = new Array(targetLen);
+  for (let i = 0; i < targetLen; i++) targetDistances[i] = (i / (targetLen - 1)) * totalLength;
+
+  // 3) Reserviere Slots für getaggte Originalpunkte
+  const reserved = new Array(targetLen).fill(null); // reserved[i] = originalIndex oder null
+  const used = new Array(targetLen).fill(false);
+
+  // Für jeden Originalpunkt mit Tag -> bestimme gewünschten Slot
+  for (let oi = 0; oi < points.length; oi++) {
+    const p = points[oi];
+    if (!p || !p.tag) continue;
+    const d = distances[oi];
+    let slot = Math.round((d / totalLength) * (targetLen - 1));
+    // in range clampen
+    slot = Math.max(0, Math.min(targetLen - 1, slot));
+
+    // Falls belegt, suche den nächsten freien Slot (vorzugsweise nach außen suchen)
+    if (!used[slot]) {
+      reserved[slot] = oi;
+      used[slot] = true;
+    } else {
+      // Suche nach nächstem freien Slot (links/rechts abwechselnd)
+      let offset = 1;
+      let placed = false;
+      while (!placed) {
+        const left = slot - offset;
+        const right = slot + offset;
+        if (left >= 0 && !used[left]) {
+          reserved[left] = oi;
+          used[left] = true;
+          placed = true;
+          break;
+        }
+        if (right < targetLen && !used[right]) {
+          reserved[right] = oi;
+          used[right] = true;
+          placed = true;
+          break;
+        }
+        offset++;
+        if (left < 0 && right >= targetLen) {
+          // Kein Platz (sehr unwahrscheinlich) -> abbruch
+          placed = true;
+          break;
+        }
+      }
+    }
+  }
+
+  // 4) Erzeuge Output: für reservierte Slots kopiere exakt den Originalpunkt (inkl. Tag)
+  const out = new Array(targetLen).fill(null);
+
+  // Hilfsfunktion: kopiere Originalpunkt (inkl. evtl. z und andere Felder)
+  const clonePoint = p => ({ ...p });
+
+  for (let i = 0; i < targetLen; i++) {
+    if (reserved[i] !== null) {
+      out[i] = clonePoint(points[reserved[i]]);
+      continue;
+    }
+    out[i] = null; // wird später gefüllt per Interpolation
+  }
+
+  // 5) Fülle die restlichen Slots per Interpolation entlang des Original-Polylines
+  // Wir iterieren die Ziel-Distanzen und finden Segment j mit distances[j] <= s <= distances[j+1]
+  let j = 0;
+  for (let i = 0; i < targetLen; i++) {
+    if (out[i]) continue; // bereits reserviert (tagged)
+    const s = targetDistances[i];
+
+    // advance j bis zum Segment passend
+    while (j < distances.length - 2 && distances[j + 1] < s) j++;
+
+    const i0 = j;
+    const i1 = Math.min(points.length - 1, j + 1);
+    const d0 = distances[i0];
+    const d1 = distances[i1];
+
+    const segLen = (d1 - d0) || 1;
+    const f = (s - d0) / segLen;
+
+    // Linear interpieren und keine Tags setzen
+    const p0 = points[i0];
+    const p1 = points[i1];
+
+    const x = p0.x * (1 - f) + p1.x * f;
+    const y = p0.y * (1 - f) + p1.y * f;
+
+    // Erzeuge Objekt ohne Tag (null)
+    out[i] = { x, y, tag: null };
+  }
+
+  return out;
+};
 

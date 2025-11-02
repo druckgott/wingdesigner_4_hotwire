@@ -2,8 +2,6 @@ window.PointTag = {
   PROFILE: "PROFILE_POINT",
   START: "START_POINT",
   END: "END_POINT",
-  LE: "LE",
-  TE: "TE",
   HOLE: "HOLE_POINT",
   HOLE_END: "HOLE_END_POINT",
   AILERON: "AILERON"

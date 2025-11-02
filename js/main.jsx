@@ -318,14 +318,7 @@ lines.forEach(line => {
       const holeOuter = window.getHolePoints(h.diameter, h.xPercent, h.yPercent, outerWithHoles, h.nPoints);
       outerWithHoles = window.insertHoleWithInOut(outerWithHoles, holeOuter, 3);
     });
- 
-    setDebugPoints({ inner: innerWithHoles.map(p => ({x: p.x, y: p.y, tag: p.tag || null })), outer: outerWithHoles.map(p => ({x: p.x, y: p.y, tag: p.tag || null}))});
 
-    const innerFinal = innerWithHoles;
-    const outerFinal = outerWithHoles;
-    
-
-/* 
     let innerTrimmed = innerWithHoles;
     let outerTrimmed = outerWithHoles;
     if (trimEnabled) {
@@ -335,9 +328,12 @@ lines.forEach(line => {
       outerTrimmed = window.trimAirfoilBack(outerTrimmed, trimTEmm);
     }
 
+    innerTrimmed = window.resampleArcLength(innerTrimmed, profilePointsCount);
+    outerTrimmed = window.resampleArcLength(outerTrimmed, profilePointsCount);
+
     const innerFinal = innerTrimmed.map(p => window.rotatePoint(p, rotationInner));
     const outerFinal = outerTrimmed.map(p => window.rotatePoint(p, rotationOuter));
-*/
+
     const scene = sceneRef.current;
     if (scene.lines && scene.lines.innerLine) scene.remove(scene.lines.innerLine);
     if (scene.lines && scene.lines.outerLine) scene.remove(scene.lines.outerLine);
@@ -349,7 +345,7 @@ lines.forEach(line => {
     scene.add(innerLine);
     scene.add(outerLine);
 
-    //setDebugPoints({ inner: innerPts.map(p => ({x: p.x, y: p.y, tag: p.tag || null })), outer: outerPts.map(p => ({x: p.x, y: p.y, tag: p.tag || null}))});
+    setDebugPoints({ inner: innerFinal.map(p => ({x: p.x, y: p.y, tag: p.tag || null })), outer: outerFinal.map(p => ({x: p.x, y: p.y, tag: p.tag || null}))});
   }, [
     innerDAT, outerDAT, 
     innerScale, outerScale, 
