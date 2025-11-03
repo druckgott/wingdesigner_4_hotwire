@@ -257,7 +257,7 @@ lines.forEach(line => {
       if (markerRef.current) {
         markerRef.current.position.copy(closestPoint);
         // Farbe abhängig vom Tag
-        if (closestTag === window.PointTag.START || closestTag === window.PointTag.END || closestTag === window.PointTag.AILERON || closestTag === window.PointTag.HOLE  || closestTag === window.PointTag.HOLE_END) {
+        if (closestTag === window.PointTag.START || closestTag === window.PointTag.END || closestTag === window.PointTag.AILERON || closestTag === window.PointTag.HOLE || closestTag === window.PointTag.HOLE_END || closestTag === window.PointTag.FRONT_TRIM) {
           markerRef.current.material.color.set(0x00ff00); // grün
         } else {
           markerRef.current.material.color.set(0x000000); // schwarz
@@ -295,8 +295,6 @@ lines.forEach(line => {
     outerPts = outerPts.map(p => ({ ...p, y: p.y * thicknessScaleOuter }));
 
     outerPts = window.offsetOuterProfile(outerPts, outerVerticalOffset, outerChordOffset);
-
-    //hier weiter bauen
     
     let [innerWithScaled, outerWithScaled] = window.matchPointCount(innerPts, outerPts);
 
@@ -308,7 +306,7 @@ lines.forEach(line => {
       outerWithAilerons = window.addBottomPath(outerWithAilerons, a.xPercent, a.thicknessTop, a.frontAngleDeg, a.rearAngleDeg);
     });
 
-     let innerWithHoles = innerWithAilerons.slice();
+    let innerWithHoles = innerWithAilerons.slice();
     let outerWithHoles = outerWithAilerons.slice();
 
    holes.forEach(h => {
@@ -326,8 +324,11 @@ lines.forEach(line => {
       innerTrimmed = window.trimAirfoilBack(innerTrimmed, trimTEmm);
       outerTrimmed = window.trimAirfoilBack(outerTrimmed, trimTEmm);
     }
+    
+    //setDebugPoints({ inner: innerTrimmed.map(p => ({x: p.x, y: p.y, tag: p.tag || null })), outer: outerTrimmed.map(p => ({x: p.x, y: p.y, tag: p.tag || null}))});
 
-    const { innerNew, outerNew } = window.syncTaggedPointsNoDuplicates(innerTrimmed, outerTrimmed, profilePointsCount);
+    //const { innerNew, outerNew } = window.syncTaggedPointsNoDuplicates(innerTrimmed, outerTrimmed, profilePointsCount);
+    const [innerNew, outerNew] = [innerTrimmed, outerTrimmed];
 
     //setDebugPoints({ inner: innerNew.map(p => ({x: p.x, y: p.y, tag: p.tag || null })), outer: outerNew.map(p => ({x: p.x, y: p.y, tag: p.tag || null}))});
 

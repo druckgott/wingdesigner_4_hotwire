@@ -201,7 +201,7 @@ window.projectToProfile = function(profilePts, x) {
   return profilePts[profilePts.length - 1].y;
 };
 
-window.addBottomPath = function(profilePts, xPercent = 0.5, gap = 2, forwardAngleDeg = 10, backwardAngleDeg = 10) {
+/*window.addBottomPath = function(profilePts, xPercent = 0.5, gap = 2, forwardAngleDeg = 10, backwardAngleDeg = 10) {
   const forwardAngle = forwardAngleDeg * Math.PI / 180;
   const backwardAngle = backwardAngleDeg * Math.PI / 180;
 
@@ -228,9 +228,6 @@ window.addBottomPath = function(profilePts, xPercent = 0.5, gap = 2, forwardAngl
   fwdPt.y = window.projectToProfile(bottomPts, fwdPt.x);
   backPt.y = window.projectToProfile(bottomPts, backPt.x);
 
-  // Filter links/rechts und alle Punkte dazwischen auch taggen
-  //const left = bottomPts.filter(p => p.x < backPt.x).map(p => ({ ...p, tag: window.PointTag.AILERON }));
-  //const right = bottomPts.filter(p => p.x > fwdPt.x).map(p => ({ ...p, tag: window.PointTag.AILERON }));
   // Bestehende Punkte links/rechts unverändert übernehmen
   const left = bottomPts.filter(p => p.x < backPt.x);
   const right = bottomPts.filter(p => p.x > fwdPt.x);
@@ -238,10 +235,85 @@ window.addBottomPath = function(profilePts, xPercent = 0.5, gap = 2, forwardAngl
   const newBottom = [...left, backPt, apexPt, fwdPt, ...right];
 
   return [...profilePts.slice(0, half), ...newBottom];
+};*/
+
+window.addBottomPath = function(profilePts, xPercent = 0.5, gap = 2, forwardAngleDeg = 10, backwardAngleDeg = 10) {
+  const forwardAngle = forwardAngleDeg * Math.PI / 180;
+  const backwardAngle = backwardAngleDeg * Math.PI / 180;
+
+  // X-Schnittpunkt für den Apex
+  const xs = profilePts.map(p => p.x);
+  const minX = Math.min(...xs), maxX = Math.max(...xs);
+  const xCut = minX + xPercent * (maxX - minX);
+
+  // Y-Werte Top/Bottom
+  const yBottom = window.findBottomAtX(profilePts, xCut);
+  const yTop = window.findTopAtX(profilePts, xCut);
+  const apexY = yTop - gap;
+  const VHeight = apexY - yBottom;
+
+  // X-Verschiebung für Vorwärts- und Rückwärtspunkte
+  const dxBack = Math.tan(backwardAngle) * VHeight;
+  const dxFwd = Math.tan(forwardAngle) * VHeight;
+
+  // Neue Punkte
+  const apexPt = { x: xCut, y: apexY, tag: window.PointTag.AILERON };
+  const backPt = { x: xCut - dxBack, y: yBottom, tag: window.PointTag.AILERON };
+  const fwdPt = { x: xCut + dxFwd, y: yBottom, tag: window.PointTag.AILERON };
+
+  // Untere Profilhälfte
+  const half = Math.ceil(profilePts.length / 2);
+  const bottomPts = profilePts.slice(half);
+
+  // Y-Koordinaten an Fwd & Back auf Profil projizieren
+  fwdPt.y = window.projectToProfile(bottomPts, fwdPt.x);
+  backPt.y = window.projectToProfile(bottomPts, backPt.x);
+
+  // 1️⃣ Punkte links vom Apex projizieren
+  let betweenLeft = bottomPts.filter(p => p.x >= backPt.x && p.x < xCut)
+    .map(p => {
+      const t = (p.x - backPt.x) / (xCut - backPt.x);
+      return {
+        ...p,
+        y: backPt.y + t * (apexPt.y - backPt.y),
+        tag: window.PointTag.AILERON
+      };
+    });
+
+  // 2️⃣ Punkte rechts vom Apex projizieren
+  let betweenRight = bottomPts.filter(p => p.x > xCut && p.x <= fwdPt.x)
+    .map(p => {
+      const t = (p.x - xCut) / (fwdPt.x - xCut);
+      return {
+        ...p,
+        y: apexPt.y + t * (fwdPt.y - apexPt.y),
+        tag: window.PointTag.AILERON
+      };
+    });
+
+  // Externe Punkte links/rechts behalten
+  const left = bottomPts.filter(p => p.x < backPt.x);
+  const right = bottomPts.filter(p => p.x > fwdPt.x);
+
+  // Neuer unterer Profilstrang
+  const newBottom = [
+    ...left,
+    backPt,
+    ...betweenLeft,
+    apexPt,
+    ...betweenRight,
+    fwdPt,
+    ...right
+  ];
+
+  return [
+    ...profilePts.slice(0, half),
+    ...newBottom
+  ];
 };
 
 
-window.trimAirfoilFront = function(points, trimLEmm) {
+/*window.trimAirfoilFront = function(points, trimLEmm) {
   if (!points || points.length < 2 || trimLEmm <= 0) return points;
   const xMin = Math.min(...points.map(p => p.x));
   const xLimit = xMin + trimLEmm;
@@ -262,9 +334,56 @@ window.trimAirfoilFront = function(points, trimLEmm) {
   }
   if (!topPoint || !bottomPoint) return points;
   return [...points.slice(0, bottomIndex), bottomPoint, topPoint, ...points.slice(topIndex + 1)];
+};*/
+
+window.trimAirfoilFront = function(points, trimLEmm) {
+  if (!points || points.length < 2 || trimLEmm <= 0) return points;
+
+  const xMin = Math.min(...points.map(p => p.x));
+  const xLimit = xMin + trimLEmm;
+
+  let topIndex = null;
+  let bottomIndex = null;
+
+  // Finde die Indizes für Top und Bottom im Trim-Bereich
+  for (let i = points.length - 1; i >= 0; i--) {
+    if (points[i].x <= xLimit) {
+      topIndex = i;
+      break;
+    }
+  }
+  for (let i = 0; i < points.length; i++) {
+    if (points[i].x <= xLimit) {
+      bottomIndex = i;
+      break;
+    }
+  }
+
+  if (topIndex === null || bottomIndex === null) return points;
+
+  // Alle Punkte links vom Trim-Bereich bleiben unverändert
+  const left = points.slice(0, bottomIndex);
+
+  // Punkte im Trim-Bereich: X auf xLimit projizieren
+  const middle = points.slice(bottomIndex, topIndex + 1).map(p => ({
+    ...p,
+    x: xLimit
+  }));
+
+  // Eckpunkte taggen
+  if (middle.length > 0) {
+    middle[0].tag = window.PointTag.FRONT_TRIM;
+    middle[middle.length - 1].tag = window.PointTag.FRONT_TRIM;
+  }
+
+  // Punkte rechts vom Trim-Bereich bleiben unverändert
+  const right = points.slice(topIndex + 1);
+
+  return [...left, ...middle, ...right];
 };
 
-window.trimAirfoilBack = function(points, trimTEmm) {
+
+/*window.trimAirfoilBack = function(points, trimTEmm) {
   if (!points || points.length < 2 || trimTEmm <= 0) return points;
   const xMax = Math.max(...points.map(p => p.x));
   const xLimit = xMax - trimTEmm;
@@ -296,6 +415,31 @@ window.trimAirfoilBack = function(points, trimTEmm) {
     }
   }
   return [...upper, ...lower];
+};*/
+
+window.trimAirfoilBack = function(points, trimTEmm) {
+  if (!points || points.length < 2 || trimTEmm <= 0) return points;
+
+  const xMax = Math.max(...points.map(p => p.x));
+  const xLimit = xMax - trimTEmm;
+
+  // Alle Punkte projizieren und gleichzeitig die projizierten Punkte sammeln
+  const projected = [];
+  const trimPoints = [];
+  
+  points.forEach(p => {
+    const newP = { ...p, x: p.x > xLimit ? xLimit : p.x };
+    projected.push(newP);
+    if (newP.x === xLimit) trimPoints.push(newP);
+  });
+
+  // Tag für erste und letzte projizierte Punkte
+  //if (trimPoints.length > 0) {
+  //  trimPoints[0].tag = window.PointTag.BACK_TRIM;
+  //  trimPoints[trimPoints.length - 1].tag = window.PointTag.BACK_TRIM;
+  //}
+
+  return projected;
 };
 
 // Funktion: Punkte gleichmäßig entlang der Kurve verteilen (Objekte {x, y})
@@ -408,33 +552,19 @@ window.resampleArcLength = function(points, targetLen) {
   return out;
 };
 
-/*function addPoint(arr, p) {
+function addPoint(arr, p, isLastSegment = false) {
   const last = arr[arr.length - 1];
   const eps = 1e-10;
   if (!last || Math.abs(last.x - p.x) >= eps || Math.abs(last.y - p.y) >= eps) {
     arr.push(p);
-  }
-}*/
-
-function addPoint(arr, p, force = false) {
-  const eps = 1e-10;
-  const last = arr[arr.length - 1];
-
-  if (!last) {
-    arr.push({ ...p });
-    return;
-  }
-
-  // Nur hinzufügen, wenn es kein exaktes Duplikat ist oder force=true
-  if (
-    force ||
-    Math.abs(last.x - p.x) > eps ||
-    Math.abs(last.y - p.y) > eps
-  ) {
-    arr.push({ ...p });
   } else {
-    // Optional: minimal verschieben, damit kein exaktes Duplikat entsteht
-    // arr.push({ x: p.x + eps, y: p.y + eps, ...p });
+    if (isLastSegment) {
+      arr.push({
+        x: p.x + 1,   // 1 mm nach vorne
+        y: p.y - 5,   // 5 mm nach unten
+        tag: p.tag || null
+      });
+    }
   }
 }
 
@@ -587,6 +717,38 @@ function movePoints(arr, taggedIndices) {
   }
 }
 
+function redistributeSegment(points) {
+  if (points.length <= 2) return points; // nichts zu tun
+
+  // 1) kumulative Abstände
+  const distances = [0];
+  for (let i = 1; i < points.length; i++) {
+    const dx = points[i].x - points[i - 1].x;
+    const dy = points[i].y - points[i - 1].y;
+    distances.push(distances[i - 1] + Math.hypot(dx, dy));
+  }
+  const totalLength = distances[distances.length - 1];
+
+  // 2) neue Positionen entlang der vorhandenen Punkte berechnen
+  const targetDistances = distances.map((_, i) => (i / (points.length - 1)) * totalLength);
+
+  // 3) Punkte proportional verschieben (linear)
+  const newPoints = points.map((p, i) => {
+    const t = targetDistances[i] / totalLength;
+    const idxF = t * (points.length - 1);
+    const idx0 = Math.floor(idxF);
+    const idx1 = Math.min(Math.ceil(idxF), points.length - 1);
+    const f = idxF - idx0;
+    return {
+      x: points[idx0].x * (1 - f) + points[idx1].x * f,
+      y: points[idx0].y * (1 - f) + points[idx1].y * f,
+      tag: points[i].tag || null
+    };
+  });
+
+  return newPoints;
+}
+
 window.syncTaggedPointsNoDuplicates = function(innerPts, outerPts, totalTargetPoints = 300) {
 
   const innerTags = innerPts.map((p, i) => p.tag ? i : null).filter(v => v !== null);
@@ -627,32 +789,15 @@ window.syncTaggedPointsNoDuplicates = function(innerPts, outerPts, totalTargetPo
     const innerInterp = interpolateSegment(innerSeg, n, isLast);
     const outerInterp = interpolateSegment(outerSeg, n, isLast);
 
-    console.log(
-      `Segment ${segmentIdx}: startTag = ${startTag}, endTag = ${endTag}, ` +
-      `pointsPerSeg = ${nPoints}, innerInterp.length = ${innerInterp.length}, outerInterp.length = ${outerInterp.length}`
-    );
+    innerInterp.forEach(p => {
+      addPoint(innerNew, p);
+      //addPoint(innerNew, p, isLast);
+    });
 
-    if (innerInterp.length !== outerInterp.length) {
-      console.warn(
-        `⚠️ Segment ${segmentIdx}: inner and outer interpolated points mismatch! ` +
-        `inner = ${innerInterp.length}, outer = ${outerInterp.length}`
-      );
-    }
-
-    innerInterp.forEach(p => addPoint(innerNew, p));
-    outerInterp.forEach(p => addPoint(outerNew, p));
-
- console.log(
-  `Segment ${segmentIdx} AFTER addPoint: innerNew.length = ${innerNew.length}, outerNew.length = ${outerNew.length}` +
-  `, innerNew first/last = ${innerNew[0]?.x},${innerNew[0]?.y} -> ${innerNew[innerNew.length - 1]?.x},${innerNew[innerNew.length - 1]?.y}` +
-  `, outerNew first/last = ${outerNew[0]?.x},${outerNew[0]?.y} -> ${outerNew[outerNew.length - 1]?.x},${outerNew[outerNew.length - 1]?.y}`
-);
-
-   if (innerNew.length !== outerNew.length) {
-  console.warn(
-    `⚠️ Segment ${segmentIdx} AFTER addPoint: innerNew.length = ${innerNew.length}, outerNew.length = ${outerNew.length} – POINTS MISMATCH!`
-  );
-}
+    outerInterp.forEach(p => {
+      addPoint(outerNew, p);
+      //addPoint(outerNew, p, isLast);
+    });
 
     if (isLast) {
       addPoint(innerNew, { ...innerPts[innerPts.length - 1], tag: 'END_POINT' });

@@ -4,7 +4,9 @@ window.PointTag = {
   END: "END_POINT",
   HOLE: "HOLE_POINT",
   HOLE_END: "HOLE_END_POINT",
-  AILERON: "AILERON"
+  AILERON: "AILERON",
+  FRONT_TRIM: "FRONT_TRIM_POINT",
+  BACK_TRIM: "BACK_TRIM_POINT"
 };
 
 window.parseDAT = function(datText) {
