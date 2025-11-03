@@ -781,8 +781,8 @@ window.resampleArcLength = function(points, targetLen) {
 };*/
 
 window.syncTaggedPointsNoDuplicates = function(innerPts, outerPts, totalTargetPoints = 300) {
-  console.log("=== DEBUG SYNC ===");
-  console.log("Input: inner=", innerPts.length, "outer=", outerPts.length);
+  //console.log("=== DEBUG SYNC ===");
+  //console.log("Input: inner=", innerPts.length, "outer=", outerPts.length);
 
   // ✅ Neue Subfunktion proportional nach Segmentlängen
   function computePointsPerSegment(innerPts, outerPts, tagIndices, totalPoints) {
@@ -819,7 +819,7 @@ window.syncTaggedPointsNoDuplicates = function(innerPts, outerPts, totalTargetPo
     let diff = totalPoints - points.reduce((a, b) => a + b, 0);
     if (diff !== 0) points[points.length - 1] += diff;
 
-    console.log("Proportional segment points:", points);
+    //console.log("Proportional segment points:", points);
     return points;
   }
 
@@ -864,7 +864,7 @@ window.syncTaggedPointsNoDuplicates = function(innerPts, outerPts, totalTargetPo
   if (!allTagIndices.includes(maxIdx)) allTagIndices.push(maxIdx);
   allTagIndices.sort((a, b) => a - b);
 
-  console.log("Tag indices:", allTagIndices);
+  //console.log("Tag indices:", allTagIndices);
 
   // ✅ Die Zielpunkte hier rein!
   const pointsPerSeg = computePointsPerSegment(innerPts, outerPts, allTagIndices, totalTargetPoints);
@@ -927,7 +927,7 @@ window.syncTaggedPointsNoDuplicates = function(innerPts, outerPts, totalTargetPo
   innerNew.length = finalMin;
   outerNew.length = finalMin;
 
-  console.log("Output: inner=", innerNew.length, "outer=", outerNew.length);
+  //console.log("Output: inner=", innerNew.length, "outer=", outerNew.length);
 
   return { innerNew, outerNew };
 };

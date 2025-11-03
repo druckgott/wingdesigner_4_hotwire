@@ -28,6 +28,7 @@ function HotwireWing3D() {
   const [activeTab, setActiveTab] = useState(null);
   const [debugOpen, setDebugOpen] = useState(false);
   const [debugPoints, setDebugPoints] = useState({ inner: [], outer: [] });
+  const [activeView, setActiveView] = useState('3D'); // '3D' | '2D-side'
 
   const canvasRef = useRef(null);
   const sceneRef = useRef(null);
@@ -38,6 +39,7 @@ function HotwireWing3D() {
   const cameraTargetRef = useRef({ x: 0, y: 0, z: 0 });
   const tooltipRef = useRef(null);
   const markerRef = useRef(null);  // der Marker für den aktuell gewählten Punkt
+  const sideCanvasRef = useRef(null);
 
   const [cameraPos, setCameraPos] = useState({x:0,y:0,z:0});
   const [cameraTarget, setCameraTarget] = useState({x:0,y:0,z:0});
@@ -275,9 +277,6 @@ lines.forEach(line => {
   return () => canvas.removeEventListener("mousemove", handleMouseMove);
 }, [sceneRef.current, rendererRef.current, cameraRef.current, debugPoints]);
 
-
-
-
   useEffect(() => {
     if (!innerDAT || !outerDAT || !sceneRef.current) return;
 
@@ -328,11 +327,9 @@ lines.forEach(line => {
       outerTrimmed = window.trimAirfoilBack(outerTrimmed, trimTEmm);
     }
 
-    //const { innerNew, outerNew } = window.resampleDualArcLength(innerTrimmed, outerTrimmed, profilePointsCount);
-
     const { innerNew, outerNew } = window.syncTaggedPointsNoDuplicates(innerTrimmed, outerTrimmed, profilePointsCount);
 
-    setDebugPoints({ inner: innerNew.map(p => ({x: p.x, y: p.y, tag: p.tag || null })), outer: outerNew.map(p => ({x: p.x, y: p.y, tag: p.tag || null}))});
+    //setDebugPoints({ inner: innerNew.map(p => ({x: p.x, y: p.y, tag: p.tag || null })), outer: outerNew.map(p => ({x: p.x, y: p.y, tag: p.tag || null}))});
 
     const innerFinal = innerNew.map(p => window.rotatePoint(p, rotationInner));
     const outerFinal = outerNew.map(p => window.rotatePoint(p, rotationOuter));
@@ -348,7 +345,7 @@ lines.forEach(line => {
     scene.add(innerLine);
     scene.add(outerLine);
 
-    //setDebugPoints({ inner: innerFinal.map(p => ({x: p.x, y: p.y, tag: p.tag || null })), outer: outerFinal.map(p => ({x: p.x, y: p.y, tag: p.tag || null}))});
+    setDebugPoints({ inner: innerFinal.map(p => ({x: p.x, y: p.y, tag: p.tag || null })), outer: outerFinal.map(p => ({x: p.x, y: p.y, tag: p.tag || null}))});
   }, [
     innerDAT, outerDAT, 
     innerScale, outerScale, 
@@ -363,6 +360,82 @@ lines.forEach(line => {
     trimEnabled, trimLEmm, trimTEmm, 
     innerColor, outerColor
   ]);
+
+// 2D 
+useEffect(() => {
+  if (!sideCanvasRef.current) return;
+  const canvas = sideCanvasRef.current;
+  const ctx = canvas.getContext('2d');
+
+  const draw = () => {
+    if (!canvas) return;
+
+    const width = canvas.clientWidth;
+    const height = canvas.clientHeight;
+    canvas.width = width;
+    canvas.height = height;
+
+    ctx.clearRect(0, 0, width, height);
+
+    const allPoints = [...debugPoints.inner, ...debugPoints.outer];
+    if (allPoints.length === 0) return;
+
+    let minY = Infinity, maxY = -Infinity, minZ = Infinity, maxZ = -Infinity;
+    allPoints.forEach(p => {
+      if (p.y < minY) minY = p.y;
+      if (p.y > maxY) maxY = p.y;
+      if (p.z < minZ) minZ = p.z;
+      if (p.z > maxZ) maxZ = p.z;
+    });
+
+    const profileWidth = maxY - minY;
+    const profileHeight = maxZ - minZ;
+
+    const pad = 20;
+    const scaleX = (width - 2*pad) / profileWidth;
+    const scaleY = (height - 2*pad) / profileHeight;
+    const scale = Math.min(scaleX, scaleY);
+    const offsetX = pad - minY * scale + (width - 2*pad - profileWidth*scale)/2;
+    const offsetY = pad + profileHeight*scale + (height - 2*pad - profileHeight*scale)/2;
+
+    // Raster
+    ctx.strokeStyle = '#ccc';
+    ctx.lineWidth = 1;
+    for(let x=0; x<width; x+=10*scale){
+      ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,height); ctx.stroke();
+    }
+    for(let y=0; y<height; y+=10*scale){
+      ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(width,y); ctx.stroke();
+    }
+
+    const drawProfile = (points, color) => {
+      ctx.strokeStyle = color;
+      ctx.beginPath();
+      points.forEach((p,i)=>{
+        const px = p.y * scale + offsetX;
+        const py = offsetY - p.z * scale;
+        if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+      });
+      ctx.stroke();
+    };
+
+    if(debugPoints.inner.length>0) drawProfile(debugPoints.inner, innerColor);
+    if(debugPoints.outer.length>0) drawProfile(debugPoints.outer, outerColor);
+  };
+
+  // Initial draw oder bei debugPoints/activeView Änderung
+  if(activeView === '2D-side') draw();
+
+  // Resize-Handler nur einmal
+  const handleResize = () => {
+    if(activeView === '2D-side') draw();
+  }
+  window.addEventListener('resize', handleResize);
+
+  return () => window.removeEventListener('resize', handleResize);
+}, [debugPoints, activeView, innerColor, outerColor]);
+
+
 
   const handleFile = (e, setFunc, setName) => {
     const file = e.target.files[0];
@@ -403,8 +476,31 @@ lines.forEach(line => {
           activeTab={activeTab} setActiveTab={setActiveTab} 
           debugOpen={debugOpen} setDebugOpen={setDebugOpen} debugPoints={debugPoints}
         />
-        {/* Rechte Canvas-Box */}
-        <div ref={canvasRef} id="canvas-container" style={{flex: 1, minHeight: 0, maxHeight: 'calc(100vh - 160px)',  overflow: 'hidden' }}></div>
+        {/* Rechte Canvas-Box mit Tabs */}
+        <div style={{flex: 1, minHeight: 0, position: 'relative'}}>
+
+          {/* Tabs oben */}
+          <div style={{display:'flex', gap: 8, marginBottom: 8}}>
+            <button 
+              onClick={() => setActiveView('3D')} 
+              style={{ fontWeight: activeView==='3D'?'bold':'normal' }}
+            >3D Ansicht</button>
+            <button 
+              onClick={() => setActiveView('2D-side')} 
+              style={{ fontWeight: activeView==='2D-side'?'bold':'normal' }}
+            >Seitenansicht</button>
+          </div>
+
+          {/* Canvas-Bereiche */}
+          {activeView === '3D' && 
+            <div ref={canvasRef} id="canvas-container" style={{width:'100%', height:'100%'}}></div>
+          }
+
+          {activeView === '2D-side' &&
+            <canvas ref={sideCanvasRef} style={{width:'100%', height:'100%'}}></canvas>
+          }
+
+        </div>
         {/* Canvas-Box TooltiipRef */}
         <div ref={tooltipRef} style={{ position:'absolute', padding:'4px 6px', background:'#000', color:'#fff', borderRadius:4, pointerEvents:'none', display:'none', fontSize:12 }}></div>
       </div>
