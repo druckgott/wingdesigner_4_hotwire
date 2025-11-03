@@ -408,19 +408,70 @@ window.resampleArcLength = function(points, targetLen) {
   return out;
 };
 
-function addPoint(arr, p) {
+/*function addPoint(arr, p) {
   const last = arr[arr.length - 1];
   const eps = 1e-10;
   if (!last || Math.abs(last.x - p.x) >= eps || Math.abs(last.y - p.y) >= eps) {
     arr.push(p);
   }
+}*/
+
+function addPoint(arr, p, force = false) {
+  const eps = 1e-10;
+  const last = arr[arr.length - 1];
+
+  if (!last) {
+    arr.push({ ...p });
+    return;
+  }
+
+  // Nur hinzufügen, wenn es kein exaktes Duplikat ist oder force=true
+  if (
+    force ||
+    Math.abs(last.x - p.x) > eps ||
+    Math.abs(last.y - p.y) > eps
+  ) {
+    arr.push({ ...p });
+  } else {
+    // Optional: minimal verschieben, damit kein exaktes Duplikat entsteht
+    // arr.push({ x: p.x + eps, y: p.y + eps, ...p });
+  }
 }
 
-function interpolateSegment(seg, n, skipLast = false) {
+/*function interpolateSegment(seg, n, skipLast = false) {
   if (seg.length <= 1) return [ { ...seg[0] } ];
 
   const out = [];
   const steps = skipLast ? n : n + 1;
+  for (let i = 0; i < steps; i++) {
+    const t = i / n;
+    const idxF = t * (seg.length - 1);
+    const idx0 = Math.floor(idxF);
+    const idx1 = Math.ceil(idxF);
+    const f = idxF - idx0;
+
+    const tag =
+      i === 0 ? seg[0].tag :
+      (!skipLast && i === n) ? seg[seg.length - 1].tag :
+      null;
+
+    const x = seg[idx0].x * (1 - f) + seg[idx1].x * f;
+    const y = seg[idx0].y * (1 - f) + seg[idx1].y * f;
+
+    out.push({ x, y, tag });
+  }
+  return out;
+}*/
+
+function interpolateSegment(seg, n, skipLast = false) {
+  if (!seg.length) return [];
+  if (seg.length === 1) return [{ ...seg[0] }];
+
+  n = Math.max(1, n); // n darf nie 0 sein
+
+  const steps = skipLast ? n : n + 1;
+  const out = [];
+
   for (let i = 0; i < steps; i++) {
     const t = i / n;
     const idxF = t * (seg.length - 1);
@@ -480,21 +531,60 @@ function computePointsPerSegment(innerPts, outerPts, tagIndices, totalPoints) {
 
     const L_inner = length(innerSeg);
     const L_outer = length(outerSeg);
-    const L_avg = (L_inner + L_outer) / 2;
+    const L_seg = Math.max(L_inner, L_outer); // max statt avg
 
-    segLengths.push(L_avg);
+    segLengths.push(L_seg);
     prevTag = tagIdx;
   }
 
   const totalLength = segLengths.reduce((a, b) => a + b, 0);
-  const points = segLengths.map(L =>
-    Math.max(2, Math.round((L / totalLength) * totalPoints))
+
+  let points = segLengths.map(L =>
+    Math.max(1, Math.round((L / totalLength) * totalPoints)) // mindestens 1 Punkt
   );
 
+  // Rundungsfehler ausgleichen
   let diff = totalPoints - points.reduce((a, b) => a + b, 0);
-  if (diff !== 0) points[points.length - 1] += diff;
+  points[points.length - 1] += diff; // Differenz aufs letzte Segment
 
   return points;
+}
+
+function movePoints(arr, taggedIndices) {
+  if (arr.length <= 1) return;
+
+  // 1. Länge des Segments berechnen
+  const segLengths = [0];
+  let totalLength = 0;
+  for (let i = 1; i < arr.length; i++) {
+    const dx = arr[i].x - arr[i - 1].x;
+    const dy = arr[i].y - arr[i - 1].y;
+    totalLength += Math.hypot(dx, dy);
+    segLengths.push(totalLength);
+  }
+
+  // 2. Schrittweite für gleichmäßige Verteilung
+  const step = totalLength / (arr.length - 1);
+  let segIdx = 0;
+
+  for (let i = 0; i < arr.length; i++) {
+    const targetDist = i * step;
+
+    // Vorwärts zum richtigen Segment
+    while (segIdx < segLengths.length - 1 && segLengths[segIdx + 1] < targetDist) {
+      segIdx++;
+    }
+
+    // Tagged Point nicht verschieben
+    if (taggedIndices.includes(segIdx)) continue;
+
+    // Interpolation zwischen segIdx und segIdx+1
+    const t = (targetDist - segLengths[segIdx]) / (segLengths[segIdx + 1] - segLengths[segIdx]);
+    arr[i] = {
+      x: arr[segIdx].x + (arr[segIdx + 1].x - arr[segIdx].x) * t,
+      y: arr[segIdx].y + (arr[segIdx + 1].y - arr[segIdx].y) * t
+    };
+  }
 }
 
 window.syncTaggedPointsNoDuplicates = function(innerPts, outerPts, totalTargetPoints = 300) {
@@ -538,20 +628,31 @@ window.syncTaggedPointsNoDuplicates = function(innerPts, outerPts, totalTargetPo
     const outerInterp = interpolateSegment(outerSeg, n, isLast);
 
     console.log(
-  `Segment ${segmentIdx}: startTag = ${startTag}, endTag = ${endTag}, ` +
-  `pointsPerSeg = ${nPoints}, innerInterp.length = ${innerInterp.length}, outerInterp.length = ${outerInterp.length}`
-);
+      `Segment ${segmentIdx}: startTag = ${startTag}, endTag = ${endTag}, ` +
+      `pointsPerSeg = ${nPoints}, innerInterp.length = ${innerInterp.length}, outerInterp.length = ${outerInterp.length}`
+    );
 
-if (innerInterp.length !== outerInterp.length) {
-  console.warn(
-    `⚠️ Segment ${segmentIdx}: inner and outer interpolated points mismatch! ` +
-    `inner = ${innerInterp.length}, outer = ${outerInterp.length}`
-  );
-}
-
+    if (innerInterp.length !== outerInterp.length) {
+      console.warn(
+        `⚠️ Segment ${segmentIdx}: inner and outer interpolated points mismatch! ` +
+        `inner = ${innerInterp.length}, outer = ${outerInterp.length}`
+      );
+    }
 
     innerInterp.forEach(p => addPoint(innerNew, p));
     outerInterp.forEach(p => addPoint(outerNew, p));
+
+ console.log(
+  `Segment ${segmentIdx} AFTER addPoint: innerNew.length = ${innerNew.length}, outerNew.length = ${outerNew.length}` +
+  `, innerNew first/last = ${innerNew[0]?.x},${innerNew[0]?.y} -> ${innerNew[innerNew.length - 1]?.x},${innerNew[innerNew.length - 1]?.y}` +
+  `, outerNew first/last = ${outerNew[0]?.x},${outerNew[0]?.y} -> ${outerNew[outerNew.length - 1]?.x},${outerNew[outerNew.length - 1]?.y}`
+);
+
+   if (innerNew.length !== outerNew.length) {
+  console.warn(
+    `⚠️ Segment ${segmentIdx} AFTER addPoint: innerNew.length = ${innerNew.length}, outerNew.length = ${outerNew.length} – POINTS MISMATCH!`
+  );
+}
 
     if (isLast) {
       addPoint(innerNew, { ...innerPts[innerPts.length - 1], tag: 'END_POINT' });
