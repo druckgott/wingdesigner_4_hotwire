@@ -518,18 +518,37 @@ window.syncTaggedPointsNoDuplicates = function(innerPts, outerPts, totalTargetPo
     const innerSeg = innerPts.slice(prevTag, tagIdx + 1);
     const outerSeg = outerPts.slice(prevTag, tagIdx + 1);
 
-    //Debug
     const startTag = innerSeg[0].tag || outerSeg[0].tag || null;
     const endTag = innerSeg[innerSeg.length - 1].tag || outerSeg[outerSeg.length - 1].tag || null;
     const nPoints = pointsPerSeg[segmentIdx];
-    console.log(`Segment ${segmentIdx}: startTag = ${startTag}, endTag = ${endTag}, points = ${nPoints}`);
 
+    // ✅ Skip segments where start and end tags are identical
+    if (startTag === endTag && innerSeg.length <= 1 && outerSeg.length <= 1) {
+      //console.log(`Skipping zero-length segment ${segmentIdx}: startTag = ${startTag}`);
+      prevTag = tagIdx;
+      return; // alten Punkt einfach behalten
+    }
+
+    //console.log(`Segment ${segmentIdx}: startTag = ${startTag}, endTag = ${endTag}, points = ${nPoints}`);
 
     const isLast = segmentIdx === allTagIndices.length - 1;
-    const n = pointsPerSeg[segmentIdx] - 1;
+    const n = nPoints - 1;
 
     const innerInterp = interpolateSegment(innerSeg, n, isLast);
     const outerInterp = interpolateSegment(outerSeg, n, isLast);
+
+    console.log(
+  `Segment ${segmentIdx}: startTag = ${startTag}, endTag = ${endTag}, ` +
+  `pointsPerSeg = ${nPoints}, innerInterp.length = ${innerInterp.length}, outerInterp.length = ${outerInterp.length}`
+);
+
+if (innerInterp.length !== outerInterp.length) {
+  console.warn(
+    `⚠️ Segment ${segmentIdx}: inner and outer interpolated points mismatch! ` +
+    `inner = ${innerInterp.length}, outer = ${outerInterp.length}`
+  );
+}
+
 
     innerInterp.forEach(p => addPoint(innerNew, p));
     outerInterp.forEach(p => addPoint(outerNew, p));
