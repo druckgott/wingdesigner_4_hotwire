@@ -110,9 +110,8 @@ window.LeftPanel = function LeftPanel(props) {
       />
 
       <div className="profile-box">
-        <div className="profile-header" onClick={onToggle}>Maschinendaten</div>
-
-        {isActive && (
+          <div className="profile-header" onClick={() => setActiveTab(activeTab === 'machine' ? null : 'machine')}>Maschinendaten</div>
+        {activeTab === 'machine' && (
           <div className="profile-content">
             <label>X links:
               <input maxLength={1} value={xName} onChange={e => setXName(letterOnly(e.target.value))} />
@@ -150,11 +149,8 @@ window.LeftPanel = function LeftPanel(props) {
       </div>
 
       <div className="profile-box">
-      <div className="profile-header" onClick={() => setFoamActive(!foamActive)}>
-        Foam Block
-      </div>
-
-      {foamActive && (
+      <div className="profile-header" onClick={() => setActiveTab(activeTab === 'foam' ? null : 'foam')}>Foam Block</div>
+      {activeTab === 'foam' && (
         <div className="profile-content">
           <label>Länge (mm):
             <input type="number" value={foamLength} onChange={e => setFoamLength(Number(e.target.value))} />

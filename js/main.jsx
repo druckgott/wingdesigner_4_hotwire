@@ -380,7 +380,201 @@ lines.forEach(line => {
     innerColor, outerColor
   ]);
 
-// 2D 
+// Foam Block
+useEffect(() => {
+    if (!sceneRef.current) return;
+
+    const scene = sceneRef.current;
+
+    // Alten Foam-Block entfernen, falls vorhanden
+    if (scene.foamBlock) {
+      scene.remove(scene.foamBlock);
+      scene.foamBlock.geometry.dispose();
+      scene.foamBlock.material.dispose();
+      delete scene.foamBlock;
+    }
+
+    // Sichtbar nur, wenn mindestens einer aktiv ist
+    if (activeTab !== 'foam' && activeTab !== 'machine') return;
+
+    // Box-Geometrie für Foam-Block
+    const geometry = new THREE.BoxGeometry(
+      foamLength,  // X = Länge
+      foamWidth,   // Y = Breite
+      foamHeight   // Z = Höhe
+    );
+
+    // Material transparent
+    // --- leichte Schaumtextur erzeugen ---
+    const size = 64;
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+
+    // hellgrauer Hintergrund
+    ctx.fillStyle = '#dddddd';
+    ctx.fillRect(0, 0, size, size);
+
+    // zufällige "Poren" zeichnen
+    for (let i = 0; i < 100; i++) {
+      const x = Math.random() * size;
+      const y = Math.random() * size;
+      const r = Math.random() * 2 + 1; // Radius der Poren
+      ctx.fillStyle = 'rgba(200,200,200,0.3)';
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(foamLength/100, foamWidth/100); // wiederholen
+
+    // --- Material mit Textur ---
+    const material = new THREE.MeshBasicMaterial({
+      map: texture,
+      transparent: true,
+      opacity: 0.6, // leicht durchscheinend
+      color: 0xffffff
+    });
+
+    const foamBlock = new THREE.Mesh(geometry, material);
+
+    // Positionierung: X verschoben um foamOffset + halbe Länge
+    foamBlock.position.set(
+      foamLength/2,
+      0,
+      foamHeight/2
+    );
+
+    // Foam-Block in Szene speichern und hinzufügen
+    scene.foamBlock = foamBlock;
+    scene.add(foamBlock);
+
+  }, [
+    activeTab, 
+    machineActive,
+    xName,
+    yName,
+    uName,
+    aName,
+    axisXmm,
+    axisYmm,
+    hotwireLength,
+    speed,
+    foamActive,
+    foamLength,
+    foamWidth,
+    foamHeight,
+    foamOffset
+  ]);
+
+//Maschine
+useEffect(() => {
+  if (!sceneRef.current) return;
+  const scene = sceneRef.current;
+
+  // Alten Maschinen-Block entfernen
+  if (scene.machine) {
+    scene.remove(scene.machine);
+    scene.machine.traverse(obj => {
+      if (obj.geometry) obj.geometry.dispose();
+      if (obj.material) obj.material.dispose();
+    });
+    delete scene.machine;
+  }
+
+  if (activeTab !== 'foam' && activeTab !== 'machine') return;
+
+  const createMachineSide = (yOffset) => {
+    const sideGroup = new THREE.Group();
+
+    const aluMaterial = new THREE.MeshPhongMaterial({ color: 0xb0b0b0 });
+    const blueMaterial = new THREE.MeshPhongMaterial({ color: 0x0077ff });
+
+    const axisThickness = 20;
+    const axisWidth = 50;
+
+    // Horizontales Profil (X-Achse)
+    const xAxis = new THREE.Mesh(
+      new THREE.BoxGeometry(axisXmm, axisWidth, axisThickness),
+      aluMaterial
+    );
+    xAxis.position.set(0, 0, axisThickness / 2);
+    sideGroup.add(xAxis);
+
+    // Linker Block
+    const leftBlock = new THREE.Mesh(
+      new THREE.BoxGeometry(axisThickness, axisWidth, axisThickness),
+      blueMaterial
+    );
+    leftBlock.position.set(-axisXmm / 2 + axisThickness / 2, 0, -axisThickness/2);
+    sideGroup.add(leftBlock);
+
+    // Rechter Block
+    const rightBlock = new THREE.Mesh(
+      new THREE.BoxGeometry(axisThickness, axisWidth, axisThickness),
+      blueMaterial
+    );
+    rightBlock.position.set(axisXmm / 2 - axisThickness / 2, 0, -axisThickness/2);
+    sideGroup.add(rightBlock);
+
+    // Mittlerer blauer Block
+    const middleBlockHeight = axisThickness*2;
+    const middleBlock = new THREE.Mesh(
+      new THREE.BoxGeometry(axisThickness, axisWidth, middleBlockHeight),
+      blueMaterial
+    );
+    middleBlock.position.set(0, 0, middleBlockHeight / 2 + axisThickness / 2);
+    sideGroup.add(middleBlock);
+
+    // Vertikale Achse (Y-Achse)
+    const yAxis = new THREE.Mesh(
+      new THREE.BoxGeometry(axisThickness, axisWidth, axisYmm),
+      aluMaterial
+    );
+    yAxis.position.set(0, 0, axisYmm / 2 + axisThickness / 2);
+    sideGroup.add(yAxis);
+
+    // Oberer blauer Block
+    const topBlock = new THREE.Mesh(
+      new THREE.BoxGeometry(axisThickness, axisWidth, middleBlockHeight),
+      blueMaterial
+    );
+    topBlock.position.set(0, 0, axisYmm + axisThickness);
+    sideGroup.add(topBlock);
+
+    // Gesamtgruppe verschieben in Y
+    sideGroup.position.set(0, yOffset, 0);
+
+    return sideGroup;
+  };
+
+  const machineGroup = new THREE.Group();
+
+  // zwei Seiten erzeugen: links (-hotwireLength/2) und rechts (+hotwireLength/2)
+  machineGroup.add(createMachineSide(-hotwireLength / 2));
+  machineGroup.add(createMachineSide(hotwireLength / 2));
+
+  // Licht hinzufügen, falls noch nicht vorhanden
+  if (!scene.userData.machineLight) {
+    const directional = new THREE.DirectionalLight(0xffffff, 0.8);
+    directional.position.set(500, 500, 1000);
+    directional.castShadow = true;
+    scene.add(directional);
+
+    const ambient = new THREE.AmbientLight(0x888888);
+    scene.add(ambient);
+
+    scene.userData.machineLight = { directional, ambient };
+  }
+
+  scene.machine = machineGroup;
+  scene.add(machineGroup);
+
+}, [activeTab, hotwireLength, axisXmm, axisYmm]);
 
   const handleFile = (e, setFunc, setName) => {
     const file = e.target.files[0];
