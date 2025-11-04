@@ -30,6 +30,24 @@ function HotwireWing3D() {
   const [debugPoints, setDebugPoints] = useState({ inner: [], outer: [] });
   const [activeView, setActiveView] = useState('3D'); // '3D' | '2D-side'
 
+  //Maschine
+  const [machineActive, setMachineActive] = useState(false);
+  const [xName, setXName] = useState('X');
+  const [yName, setYName] = useState('Y');
+  const [uName, setUName] = useState('U');
+  const [aName, setAName] = useState('A');
+  const [axisXmm, setAxisXmm] = useState(1000);
+  const [axisYmm, setAxisYmm] = useState(500);
+  const [hotwireLength, setHotwireLength] = useState(800);
+  const [speed, setSpeed] = useState(200);
+
+  // Foam Block
+  const [foamActive, setFoamActive] = useState(false);
+  const [foamLength, setFoamLength] = useState(1000); // mm
+  const [foamWidth, setFoamWidth] = useState(500);   // mm
+  const [foamHeight, setFoamHeight] = useState(300); // mm
+  const [foamOffset, setFoamOffset] = useState(100);   // mm
+
   const canvasRef = useRef(null);
   const sceneRef = useRef(null);
   const cameraRef = useRef(null);
@@ -363,80 +381,6 @@ lines.forEach(line => {
   ]);
 
 // 2D 
-useEffect(() => {
-  if (!sideCanvasRef.current) return;
-  const canvas = sideCanvasRef.current;
-  const ctx = canvas.getContext('2d');
-
-  const draw = () => {
-    if (!canvas) return;
-
-    const width = canvas.clientWidth;
-    const height = canvas.clientHeight;
-    canvas.width = width;
-    canvas.height = height;
-
-    ctx.clearRect(0, 0, width, height);
-
-    const allPoints = [...debugPoints.inner, ...debugPoints.outer];
-    if (allPoints.length === 0) return;
-
-    let minY = Infinity, maxY = -Infinity, minZ = Infinity, maxZ = -Infinity;
-    allPoints.forEach(p => {
-      if (p.y < minY) minY = p.y;
-      if (p.y > maxY) maxY = p.y;
-      if (p.z < minZ) minZ = p.z;
-      if (p.z > maxZ) maxZ = p.z;
-    });
-
-    const profileWidth = maxY - minY;
-    const profileHeight = maxZ - minZ;
-
-    const pad = 20;
-    const scaleX = (width - 2*pad) / profileWidth;
-    const scaleY = (height - 2*pad) / profileHeight;
-    const scale = Math.min(scaleX, scaleY);
-    const offsetX = pad - minY * scale + (width - 2*pad - profileWidth*scale)/2;
-    const offsetY = pad + profileHeight*scale + (height - 2*pad - profileHeight*scale)/2;
-
-    // Raster
-    ctx.strokeStyle = '#ccc';
-    ctx.lineWidth = 1;
-    for(let x=0; x<width; x+=10*scale){
-      ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,height); ctx.stroke();
-    }
-    for(let y=0; y<height; y+=10*scale){
-      ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(width,y); ctx.stroke();
-    }
-
-    const drawProfile = (points, color) => {
-      ctx.strokeStyle = color;
-      ctx.beginPath();
-      points.forEach((p,i)=>{
-        const px = p.y * scale + offsetX;
-        const py = offsetY - p.z * scale;
-        if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
-      });
-      ctx.stroke();
-    };
-
-    if(debugPoints.inner.length>0) drawProfile(debugPoints.inner, innerColor);
-    if(debugPoints.outer.length>0) drawProfile(debugPoints.outer, outerColor);
-  };
-
-  // Initial draw oder bei debugPoints/activeView Änderung
-  if(activeView === '2D-side') draw();
-
-  // Resize-Handler nur einmal
-  const handleResize = () => {
-    if(activeView === '2D-side') draw();
-  }
-  window.addEventListener('resize', handleResize);
-
-  return () => window.removeEventListener('resize', handleResize);
-}, [debugPoints, activeView, innerColor, outerColor]);
-
-
 
   const handleFile = (e, setFunc, setName) => {
     const file = e.target.files[0];
@@ -476,31 +420,30 @@ useEffect(() => {
           trimLEmm={trimLEmm} setTrimLEmm={setTrimLEmm} trimTEmm={trimTEmm} setTrimTEmm={setTrimTEmm}
           activeTab={activeTab} setActiveTab={setActiveTab} 
           debugOpen={debugOpen} setDebugOpen={setDebugOpen} debugPoints={debugPoints}
+
+            // === Maschinendaten Props ===
+          isActive={machineActive} onToggle={() => setMachineActive(!machineActive)}
+          xName={xName} setXName={setXName}
+          yName={yName} setYName={setYName}
+          uName={uName} setUName={setUName}
+          aName={aName} setAName={setAName}
+          axisXmm={axisXmm} setAxisXmm={setAxisXmm}
+          axisYmm={axisYmm} setAxisYmm={setAxisYmm}
+          hotwireLength={hotwireLength} setHotwireLength={setHotwireLength}
+          speed={speed} setSpeed={setSpeed}
+
+          // === Foam Block Props ===
+          foamActive={foamActive} setFoamActive={setFoamActive}
+          foamLength={foamLength} setFoamLength={setFoamLength}
+          foamWidth={foamWidth} setFoamWidth={setFoamWidth}
+          foamHeight={foamHeight} setFoamHeight={setFoamHeight}
+          foamOffset={foamOffset} setFoamOffset={setFoamOffset}
+
         />
         {/* Rechte Canvas-Box mit Tabs */}
         <div style={{flex: 1, minHeight: 0, position: 'relative'}}>
-
-          {/* Tabs oben */}
-          <div style={{display:'flex', gap: 8, marginBottom: 8}}>
-            <button 
-              onClick={() => setActiveView('3D')} 
-              style={{ fontWeight: activeView==='3D'?'bold':'normal' }}
-            >3D Ansicht</button>
-            <button 
-              onClick={() => setActiveView('2D-side')} 
-              style={{ fontWeight: activeView==='2D-side'?'bold':'normal' }}
-            >Seitenansicht</button>
-          </div>
-
           {/* Canvas-Bereiche */}
-          {activeView === '3D' && 
-            <div ref={canvasRef} id="canvas-container" style={{width:'100%', height:'100%'}}></div>
-          }
-
-          {activeView === '2D-side' &&
-            <canvas ref={sideCanvasRef} style={{width:'100%', height:'100%'}}></canvas>
-          }
-
+          <div ref={canvasRef} id="canvas-container" style={{width:'100%', height:'100%'}}></div>
         </div>
         {/* Canvas-Box TooltiipRef */}
         <div ref={tooltipRef} style={{ position:'absolute', padding:'4px 6px', background:'#000', color:'#fff', borderRadius:4, pointerEvents:'none', display:'none', fontSize:12 }}></div>
