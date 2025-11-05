@@ -275,8 +275,8 @@ window.addBottomPath = function(profilePts, xPercent = 0.5, gap = 2, forwardAngl
       const t = (p.x - backPt.x) / (xCut - backPt.x);
       return {
         ...p,
-        y: backPt.y + t * (apexPt.y - backPt.y),
-        tag: window.PointTag.AILERON
+        y: backPt.y + t * (apexPt.y - backPt.y) //,
+        //tag: window.PointTag.AILERON
       };
     });
 
@@ -824,5 +824,176 @@ window.syncTaggedPointsNoDuplicates = function(innerPts, outerPts, totalTargetPo
 
   return { innerNew, outerNew };
 };
+
+/*window.syncSegmentPointCounts = function(innerPts, outerPts) {
+
+  // Tag-Indizes sammeln, Reihenfolge beibehalten
+  const tagIndices = innerPts.map((p, i) => p.tag ? i : null).filter(v => v !== null);
+  if (!tagIndices.includes(innerPts.length - 1)) tagIndices.push(innerPts.length - 1);
+
+  const innerNew = [];
+  const outerNew = [];
+
+  let prevIdx = 0;
+  let isFirstSegment = true;
+
+  tagIndices.forEach(tagIdx => {
+    const innerSeg = innerPts.slice(prevIdx, tagIdx + 1);
+    const outerSeg = outerPts.slice(prevIdx, tagIdx + 1);
+
+    const nTarget = Math.max(innerSeg.length, outerSeg.length);
+
+    const innerInterp = interpolateSegment(innerSeg, nTarget);
+    const outerInterp = interpolateSegment(outerSeg, nTarget);
+
+    if (isFirstSegment) {
+      innerNew.push(...innerInterp);
+      outerNew.push(...outerInterp);
+      isFirstSegment = false;
+    } else {
+      innerNew.push(...innerInterp.slice(1));
+      outerNew.push(...outerInterp.slice(1));
+    }
+
+    prevIdx = tagIdx;
+  });
+
+  // Debug: Ende
+
+  return { innerNew, outerNew };
+
+  function interpolateSegment(segment, targetCount) {
+    const originalCount = segment.length;
+    if (originalCount === targetCount) {
+      // Keine Änderung nötig, Original zurückgeben (mit Tags erhalten)
+      return segment.map(p => ({ ...p }));
+    }
+    if (originalCount > targetCount) {
+      // Sollte nicht passieren, da target = max, aber zur Sicherheit
+      return segment.map(p => ({ ...p }));
+    }
+
+    // Punkte hinzufügen, Originale behalten
+    const toAdd = targetCount - originalCount;
+    const intervals = originalCount - 1;
+    const perInterval = Math.floor(toAdd / intervals);
+    const remainder = toAdd % intervals;
+
+    const newPts = [{ ...segment[0] }]; // Start mit Original (Tag erhalten)
+
+    for (let i = 0; i < intervals; i++) {
+      let numSub = perInterval + (i < remainder ? 1 : 0);
+      const p0 = segment[i];
+      const p1 = segment[i + 1];
+
+      for (let j = 1; j <= numSub; j++) {
+        const t = j / (numSub + 1);
+        newPts.push({
+          x: p0.x + t * (p1.x - p0.x),
+          y: p0.y + t * (p1.y - p0.y),
+          tag: null
+        });
+      }
+
+      console.log("DEBUG: Neuer Punkt von Originalpunkt:", 
+                    "von x:", p0.x, "y:", p0.y, 
+                    p0.tag ? "Tag: " + p0.tag : "kein Tag", 
+                    "-> neuer Punkt x:", newP.x, "y:", newP.y);
+                    
+      // Ende des Intervalls: nächster Originalpunkt (Tag erhalten)
+      newPts.push({ ...segment[i + 1] });
+    }
+
+    return newPts;
+  }
+};*/
+
+window.syncSegmentPointCounts = function(inner, outer) {
+  // Kopien, damit Original nicht verändert wird
+  const innerNew = inner.map(p => ({ ...p }));
+  const outerNew = outer.map(p => ({ ...p }));
+
+  // Hilfsfunktion: Segment-Ende finden (Tag-Situation gleich)
+  function findSegmentEnd(points, startIndex) {
+    if (startIndex >= points.length) return startIndex;
+    const startHasTag = !!points[startIndex].tag;
+    let endIndex = startIndex + 1;
+    while (endIndex < points.length) {
+      const currentHasTag = !!points[endIndex].tag;
+      if (currentHasTag !== startHasTag) break;
+      endIndex++;
+    }
+    return endIndex;
+  }
+
+  // Hauptschleife: Schritt für Schritt
+  let i = 0;
+  let j = 0;
+
+  while (i < innerNew.length || j < outerNew.length) {
+    const innerEnd = i < innerNew.length ? findSegmentEnd(innerNew, i) : i;
+    const outerEnd = j < outerNew.length ? findSegmentEnd(outerNew, j) : j;
+
+    const innerSegment = innerNew.slice(i, innerEnd);
+    const outerSegment = outerNew.slice(j, outerEnd);
+
+    // Debug
+    const innerTag = innerSegment[0]?.tag || null;
+    const outerTag = outerSegment[0]?.tag || null;
+    console.log(`Segment: Inner [${i}-${innerEnd - 1}] Tag: ${innerTag}, Outer [${j}-${outerEnd - 1}] Tag: ${outerTag}`);
+
+    const innerCount = innerSegment.length;
+    const outerCount = outerSegment.length;
+
+    // 1️⃣ Prüfen, ob Segment auf einer Seite fehlt (Tag vorhanden, andere Seite leer)
+    if (innerCount === 0 && outerCount > 0) {
+      // Segment auf Outer kopieren
+      const segmentCopy = outerSegment.map(p => ({ ...p }));
+      innerNew.splice(i, 0, ...segmentCopy);
+    } else if (outerCount === 0 && innerCount > 0) {
+      // Segment auf Inner kopieren
+      const segmentCopy = innerSegment.map(p => ({ ...p }));
+      outerNew.splice(j, 0, ...segmentCopy);
+    } else {
+      // 2️⃣ Punktanzahl ausgleichen innerhalb des Segments
+      if (innerCount > outerCount) {
+        const lastPoint = outerSegment[outerSegment.length - 1];
+        for (let k = 0; k < innerCount - outerCount; k++) {
+          outerNew.splice(j + outerCount + k, 0, { x: lastPoint.x, y: lastPoint.y, tag: lastPoint.tag || undefined });
+        }
+      } else if (outerCount > innerCount) {
+        const lastPoint = innerSegment[innerSegment.length - 1];
+        for (let k = 0; k < outerCount - innerCount; k++) {
+          innerNew.splice(i + innerCount + k, 0, { x: lastPoint.x, y: lastPoint.y, tag: lastPoint.tag || undefined });
+        }
+      }
+
+      // 3️⃣ Tags abgleichen: Wenn eine Seite Tag hat und die andere nicht
+      const innerHasTag = innerSegment.some(p => p.tag);
+      const outerHasTag = outerSegment.some(p => p.tag);
+
+      if (innerHasTag && !outerHasTag) {
+        const tagPoint = innerSegment.find(p => p.tag);
+        outerNew.splice(j, 0, { x: tagPoint.x, y: tagPoint.y, tag: tagPoint.tag });
+      } else if (!innerHasTag && outerHasTag) {
+        const tagPoint = outerSegment.find(p => p.tag);
+        innerNew.splice(i, 0, { x: tagPoint.x, y: tagPoint.y, tag: tagPoint.tag });
+      }
+    }
+
+    // Indizes für nächstes Segment setzen
+    i = findSegmentEnd(innerNew, i);
+    j = findSegmentEnd(outerNew, j);
+  }
+
+  return { innerNew, outerNew };
+};
+
+
+
+
+
+
+
 
 
