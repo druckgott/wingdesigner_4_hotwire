@@ -1088,6 +1088,21 @@ window.interpolateSegmentsAlongPath = function(points) {
   return result;
 };
 
+// Projiziert einen Punkt entlang der Z-Achse um einen Wert offset
+window.projectPointWithOffset = function(point, offset) {
+    if (Array.isArray(point)) {
+        return [point[0], point[1], offset];
+    } else if (typeof point === 'object') {
+        return { x: point.x, y: point.y, z: offset };
+    } else {
+        throw new Error('Ungültiger Punkt-Typ');
+    }
+};
+
+// Funktion für ganze Punktlisten
+window.projectPointsWithOffset = function(points, offset) {
+    return points.map(p => window.projectPointWithOffset(p, offset));
+};
 
 
 

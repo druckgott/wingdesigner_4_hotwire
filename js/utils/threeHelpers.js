@@ -1,10 +1,34 @@
-window.createLine = function(pts, yOffset, color) {
-  const geometry = new THREE.BufferGeometry();
-  const vertices = [];
-  pts.forEach(p => vertices.push(p.x, yOffset, p.y));
-  geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-  return new THREE.Line(geometry, new THREE.LineBasicMaterial({ color }));
+window.createLine = function(pts, yOffset, color, dashed = false, opacity = 1) {
+    const geometry = new THREE.BufferGeometry();
+    const vertices = [];
+    pts.forEach(p => vertices.push(p.x, yOffset, p.y));
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+
+    let material;
+    if (dashed) {
+        material = new THREE.LineDashedMaterial({
+            color: color,
+            dashSize: 1,     // Länge der Striche
+            gapSize: 0.5,    // Abstand zwischen Strichen
+            linewidth: 1,
+            transparent: true,
+            opacity: opacity
+        });
+    } else {
+        material = new THREE.LineBasicMaterial({
+            color: color,
+            transparent: opacity < 1,
+            opacity: opacity
+        });
+    }
+
+    const line = new THREE.Line(geometry, material);
+
+    if (dashed) line.computeLineDistances(); // Wichtig für gestrichelte Linien
+
+    return line;
 };
+
 
 window.removeLine = function(scene, lineName) {
   if (scene.lines && scene.lines[lineName]) {
@@ -164,6 +188,85 @@ window.addCenterMMGrid = function(scene, innerProfile, outerProfile, coarseStep 
   scene.gridMM = gridGroup;
   scene.add(gridGroup);
 };
+
+window.createProjectedSurface = function(scene, innerProjected, outerProjected, innerColor = 0x00ff00, outerColor = 0x88ff88, opacity = 0.5) {
+  if (!innerProjected || !outerProjected || innerProjected.length !== outerProjected.length) {
+    console.warn("createProjectedSurface: Arrays fehlen oder haben unterschiedliche Länge");
+    return;
+  }
+
+  // Vorherige Fläche entfernen
+  if (scene.projectedSurface) {
+    scene.remove(scene.projectedSurface);
+    scene.projectedSurface.traverse(obj => {
+      if (obj.geometry) obj.geometry.dispose();
+      if (obj.material) obj.material.dispose();
+    });
+    delete scene.projectedSurface;
+  }
+
+  const group = new THREE.Group();
+
+  for (let i = 0; i < innerProjected.length - 1; i++) {
+    const p1 = innerProjected[i];
+    const p2 = outerProjected[i];
+    const p3 = outerProjected[i + 1];
+    const p4 = innerProjected[i + 1];
+
+    const geometry = new THREE.BufferGeometry();
+    const vertices = new Float32Array([
+      p1.x, p1.z, p1.y,
+      p2.x, p2.z, p2.y,
+      p3.x, p3.z, p3.y,
+
+      p3.x, p3.z, p3.y,
+      p4.x, p4.z, p4.y,
+      p1.x, p1.z, p1.y,
+    ]);
+    geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+    geometry.computeVertexNormals();
+
+    // Außenfläche: leichtes Grün, transparent, kaum Glanz
+    const outerMaterial = new THREE.MeshPhongMaterial({
+      color: outerColor,
+      side: THREE.FrontSide,
+      transparent: true,
+      opacity: opacity,
+      shininess: 10,
+      specular: 0x00ff00, // leicht grünlicher Glanz
+    });
+
+    // Innenfläche: sattes Grün, wie vorher
+    const innerMaterial = new THREE.MeshPhongMaterial({
+      color: innerColor,
+      side: THREE.BackSide,
+      transparent: true,
+      opacity: opacity,
+      shininess: 80,
+      specular: 0xffffff,
+    });
+
+    group.add(new THREE.Mesh(geometry, outerMaterial));
+    group.add(new THREE.Mesh(geometry, innerMaterial));
+  }
+
+  scene.projectedSurface = group;
+  scene.add(group);
+
+  // Licht prüfen / hinzufügen
+  if (!scene.userData.projectedSurfaceLight) {
+    const ambient = new THREE.AmbientLight(0xffffff, 0.4);
+    const directional = new THREE.DirectionalLight(0xffffff, 0.8);
+    directional.position.set(500, 500, 1000);
+    const fill = new THREE.DirectionalLight(0xffffff, 0.3);
+    fill.position.set(-500, -500, -500);
+    scene.add(ambient, directional, fill);
+    scene.userData.projectedSurfaceLight = { ambient, directional, fill };
+  }
+};
+
+
+
 
 
 

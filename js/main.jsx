@@ -46,7 +46,7 @@ function HotwireWing3D() {
   // Foam Block
   const [foamActive, setFoamActive] = useState(false);
   const [foamLength, setFoamLength] = useState(1000); // mm
-  const [foamWidth, setFoamWidth] = useState(500);   // mm
+  const [foamWidth, setFoamWidth] = useState(600);   // mm
   const [foamHeight, setFoamHeight] = useState(300); // mm
   const [foamOffset, setFoamOffset] = useState(100);   // mm
 
@@ -361,6 +361,9 @@ lines.forEach(line => {
     const innerFinal = innerNew.map(p => window.rotatePoint(p, rotationInner));
     const outerFinal = outerNew.map(p => window.rotatePoint(p, rotationOuter));
 
+    const innerProjected = window.projectPointsWithOffset(innerFinal, -foamWidth / 2);
+    const outerProjected = window.projectPointsWithOffset(outerFinal, foamWidth / 2);
+
     const scene = sceneRef.current;
     //if (scene.lines && scene.lines.innerLine) scene.remove(scene.lines.innerLine);
     //if (scene.lines && scene.lines.outerLine) scene.remove(scene.lines.outerLine);
@@ -368,6 +371,8 @@ lines.forEach(line => {
     window.removeLine(scene, 'outerLine');
     window.removeLine(scene, 'centerInnerLine');
     window.removeLine(scene, 'centerOuterLine');
+    window.removeLine(scene, 'innerProjectedLine');
+    window.removeLine(scene, 'outerProjectedLine');
 
     const innerLine = window.createLine(innerFinal, -span / 2, parseInt(innerColor.slice(1), 16));
     const outerLine = window.createLine(outerFinal, span / 2, parseInt(outerColor.slice(1), 16));
@@ -375,15 +380,21 @@ lines.forEach(line => {
     const centerInnerLine = window.createLine(innerFinal, 0, parseInt(centerInnerColor.slice(1), 16));
     const centerOuterLine = window.createLine(outerFinal, 0, parseInt(centerOuterColor.slice(1), 16));
 
-    scene.lines = { innerLine, outerLine, centerInnerLine, centerOuterLine };
+    const innerProjectedLine = window.createLine(innerProjected, -foamWidth / 2, parseInt(innerColor.slice(1), 16), true, 0.5);
+    const outerProjectedLine = window.createLine(outerProjected, foamWidth / 2, parseInt(outerColor.slice(1), 16), true, 0.5);
+
+    scene.lines = { innerLine, outerLine, centerInnerLine, centerOuterLine, innerProjectedLine, outerProjectedLine };
     scene.add(innerLine);
     scene.add(outerLine);
-
     scene.add(centerInnerLine);
     scene.add(centerOuterLine);
+    scene.add(innerProjectedLine);
+    scene.add(outerProjectedLine);
 
     window.addCenterMMGrid(scene, innerFinal, outerFinal, 10, 1);
 
+    window.createProjectedSurface(sceneRef.current, innerProjected, outerProjected, 0xff8800, 0.5);
+    
     setDebugPoints({ inner: innerFinal.map(p => ({x: p.x, y: p.y, tag: p.tag || null })), outer: outerFinal.map(p => ({x: p.x, y: p.y, tag: p.tag || null}))});
   }, [
     innerDAT, outerDAT, 
