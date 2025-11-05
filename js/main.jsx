@@ -4,6 +4,7 @@ function HotwireWing3D() {
   const [innerDAT, setInnerDAT] = useState("");
   const [innerName, setInnerName] = useState("clarky.dat");
   const [innerColor, setInnerColor] = useState("#ff0000");
+  const [centerInnerColor, setCenterInnerColor] = useState("#000000"); // schwarz
   const [innerScale, setInnerScale] = useState(100);
   const [thicknessScaleInner, setThicknessScaleInner] = useState(1.0);
   const [rotationInner, setRotationInner] = useState(0);
@@ -11,6 +12,7 @@ function HotwireWing3D() {
   const [outerDAT, setOuterDAT] = useState("");
   const [outerName, setOuterName] = useState("clarky.dat");
   const [outerColor, setOuterColor] = useState("#0000ff");
+  const [centerOuterColor, setCenterOuterColor] = useState("#888888"); // grau
   const [outerScale, setOuterScale] = useState(120);
   const [thicknessScaleOuter, setThicknessScaleOuter] = useState(1.0);
   const [rotationOuter, setRotationOuter] = useState(0);
@@ -354,23 +356,35 @@ lines.forEach(line => {
     innerNew = window.interpolateSegmentsAlongPath(innerNew);
     outerNew = window.interpolateSegmentsAlongPath(outerNew);
 
-    setDebugPoints({ inner: innerNew.map(p => ({x: p.x, y: p.y, tag: p.tag || null })), outer: outerNew.map(p => ({x: p.x, y: p.y, tag: p.tag || null}))});
+    //setDebugPoints({ inner: innerNew.map(p => ({x: p.x, y: p.y, tag: p.tag || null })), outer: outerNew.map(p => ({x: p.x, y: p.y, tag: p.tag || null}))});
 
     const innerFinal = innerNew.map(p => window.rotatePoint(p, rotationInner));
     const outerFinal = outerNew.map(p => window.rotatePoint(p, rotationOuter));
 
     const scene = sceneRef.current;
-    if (scene.lines && scene.lines.innerLine) scene.remove(scene.lines.innerLine);
-    if (scene.lines && scene.lines.outerLine) scene.remove(scene.lines.outerLine);
+    //if (scene.lines && scene.lines.innerLine) scene.remove(scene.lines.innerLine);
+    //if (scene.lines && scene.lines.outerLine) scene.remove(scene.lines.outerLine);
+    window.removeLine(scene, 'innerLine');
+    window.removeLine(scene, 'outerLine');
+    window.removeLine(scene, 'centerInnerLine');
+    window.removeLine(scene, 'centerOuterLine');
 
     const innerLine = window.createLine(innerFinal, -span / 2, parseInt(innerColor.slice(1), 16));
     const outerLine = window.createLine(outerFinal, span / 2, parseInt(outerColor.slice(1), 16));
 
-    scene.lines = { innerLine, outerLine };
+    const centerInnerLine = window.createLine(innerFinal, 0, parseInt(centerInnerColor.slice(1), 16));
+    const centerOuterLine = window.createLine(outerFinal, 0, parseInt(centerOuterColor.slice(1), 16));
+
+    scene.lines = { innerLine, outerLine, centerInnerLine, centerOuterLine };
     scene.add(innerLine);
     scene.add(outerLine);
 
-    //setDebugPoints({ inner: innerFinal.map(p => ({x: p.x, y: p.y, tag: p.tag || null })), outer: outerFinal.map(p => ({x: p.x, y: p.y, tag: p.tag || null}))});
+    scene.add(centerInnerLine);
+    scene.add(centerOuterLine);
+
+    window.addCenterMMGrid(scene, innerFinal, outerFinal, 10, 1);
+
+    setDebugPoints({ inner: innerFinal.map(p => ({x: p.x, y: p.y, tag: p.tag || null })), outer: outerFinal.map(p => ({x: p.x, y: p.y, tag: p.tag || null}))});
   }, [
     innerDAT, outerDAT, 
     innerScale, outerScale, 
