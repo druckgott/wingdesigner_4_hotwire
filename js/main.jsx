@@ -361,8 +361,10 @@ lines.forEach(line => {
     const innerFinal = innerNew.map(p => window.rotatePoint(p, rotationInner));
     const outerFinal = outerNew.map(p => window.rotatePoint(p, rotationOuter));
 
-    const innerProjected = window.projectPointsWithOffset(innerFinal, -foamWidth / 2);
-    const outerProjected = window.projectPointsWithOffset(outerFinal, foamWidth / 2);
+    //const innerProjected = window.projectPointsWithOffset(innerFinal, -test_space);
+    //const outerProjected = window.projectPointsWithOffset(outerFinal, test_space);
+
+    const { innerProjected, outerProjected } =  window.projectProfiles(innerFinal, outerFinal, span, foamWidth);
 
     const scene = sceneRef.current;
     //if (scene.lines && scene.lines.innerLine) scene.remove(scene.lines.innerLine);
@@ -380,8 +382,8 @@ lines.forEach(line => {
     const centerInnerLine = window.createLine(innerFinal, 0, parseInt(centerInnerColor.slice(1), 16));
     const centerOuterLine = window.createLine(outerFinal, 0, parseInt(centerOuterColor.slice(1), 16));
 
-    const innerProjectedLine = window.createLine(innerProjected, -foamWidth / 2, parseInt(innerColor.slice(1), 16), true, 0.5);
-    const outerProjectedLine = window.createLine(outerProjected, foamWidth / 2, parseInt(outerColor.slice(1), 16), true, 0.5);
+    const innerProjectedLine = window.createLine(innerProjected, -foamWidth/2, parseInt(innerColor.slice(1), 16), true, 0.5);
+    const outerProjectedLine = window.createLine(outerProjected, foamWidth/2, parseInt(outerColor.slice(1), 16), true, 0.5);
 
     scene.lines = { innerLine, outerLine, centerInnerLine, centerOuterLine, innerProjectedLine, outerProjectedLine };
     scene.add(innerLine);

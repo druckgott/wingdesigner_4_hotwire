@@ -1104,6 +1104,58 @@ window.projectPointsWithOffset = function(points, offset) {
     return points.map(p => window.projectPointWithOffset(p, offset));
 };
 
+window.projectProfiles = function(innerFinal, outerFinal, currentSpan, newSpan) {
+    if (innerFinal.length !== outerFinal.length) {
+        throw new Error("Profilpunktlisten müssen gleich lang sein!");
+    }
+
+    const offset = (newSpan - currentSpan) / 2;
+
+    const innerProj = [];
+    const outerProj = [];
+
+    for (let i = 0; i < innerFinal.length; i++) {
+        // Originalpunkte
+        const inner = innerFinal[i];
+        const outer = outerFinal[i];
+
+        // Punkte in 3D setzen
+        const inner3D = { x: inner.x, y: inner.y, z: -currentSpan / 2 };
+        const outer3D = { x: outer.x, y: outer.y, z: +currentSpan / 2 };
+
+        // Vektor von inner -> outer
+        const dx = outer3D.x - inner3D.x;
+        const dy = outer3D.y - inner3D.y;
+        const dz = outer3D.z - inner3D.z;
+
+        const len = Math.sqrt(dx*dx + dy*dy + dz*dz);
+        const ux = dx / len;
+        const uy = dy / len;
+        const uz = dz / len;
+
+        // Projizierte Punkte entlang des Vektors
+        innerProj.push({
+            x: inner3D.x - ux * offset,
+            y: inner3D.y - uy * offset,
+            z: inner3D.z - uz * offset
+        });
+
+        outerProj.push({
+            x: outer3D.x + ux * offset,
+            y: outer3D.y + uy * offset,
+            z: outer3D.z + uz * offset
+        });
+    }
+
+        return { 
+        innerProjected: innerProj, 
+        outerProjected: outerProj 
+    };
+};
+
+
+
+
 
 
 
