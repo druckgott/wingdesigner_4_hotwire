@@ -27,7 +27,13 @@ window.LeftPanel = function LeftPanel(props) {
     foamHeight, setFoamHeight,
     foamOffset, setFoamOffset,
     foamActive, setFoamActive,
-    surfaceVisible, setSurfaceVisible
+    //Surface
+    surfaceVisible, setSurfaceVisible,
+    //spiegeln und Ausfahrpunkte
+    hotwirePoint, setHotwirePoint,
+    mirrorWing, setMirrorWing,
+    mirrorGap, setMirrorGap,
+    machineEntryExit, setMachineEntryExit
   } = props;
 
   const letterOnly = (v) => v.replace(/[^A-Za-z]/g, '').toUpperCase();
@@ -58,6 +64,26 @@ window.LeftPanel = function LeftPanel(props) {
         Surface anzeigen
       </label>
 
+      <label>
+        <input type="checkbox" checked={hotwirePoint} onChange={e => { const val = e.target.checked; setHotwirePoint(val); if (!val) { setMirrorWing(false); setMachineEntryExit(false); } }} /> 
+        Hotwire Ein-/Ausfahrpunkt erzeugen
+      </label>
+
+      <label style={{ opacity: hotwirePoint ? 1 : 0.5 }}>
+        <input type="checkbox" checked={mirrorWing} onChange={e => { if (hotwirePoint) setMirrorWing(e.target.checked); if (!e.target.checked) setMachineEntryExit(false); }} disabled={!hotwirePoint} /> 
+        Tragfläche spiegeln
+      </label>
+
+      <label style={{ opacity: mirrorWing && hotwirePoint ? 1 : 0.5 }}>Abstand Ober-/Unterfläche (mm) 
+        <input type="number" value={mirrorGap} onChange={e => setMirrorGap(Number(e.target.value))} disabled={!mirrorWing || !hotwirePoint} /> 
+        <input type="range" min="1" max="10" step="0.1" value={mirrorGap} onChange={e => setMirrorGap(Number(e.target.value))} disabled={!mirrorWing || !hotwirePoint} />
+      </label>
+
+      <label style={{ opacity: mirrorWing && hotwirePoint ? 1 : 0.5 }}>
+        <input type="checkbox" checked={machineEntryExit} onChange={e => { if (mirrorWing && hotwirePoint) setMachineEntryExit(e.target.checked); }} disabled={!mirrorWing || !hotwirePoint} /> 
+        Maschine ein-/ausfahren
+      </label>
+  
       <ProfileBox title="Inner Profil" color={innerColor} isActive={activeTab === 'inner'} onToggle={() => setActiveTab(activeTab === 'inner' ? null : 'inner')}>
         <label>Farbe <input type="color" value={innerColor} onChange={e => setInnerColor(e.target.value)} /></label>
 

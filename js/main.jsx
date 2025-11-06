@@ -33,7 +33,12 @@ function HotwireWing3D() {
   const [activeTab, setActiveTab] = useState(null);
   const [debugOpen, setDebugOpen] = useState(false);
   const [debugPoints, setDebugPoints] = useState({ inner: [], outer: [] });
-  const [activeView, setActiveView] = useState('3D'); // '3D' | '2D-side'
+
+    // === Schritte fuer Maschinenein und Ausfahrt sowie spiegeln ===
+  const [hotwirePoint, setHotwirePoint] = useState(false);
+  const [mirrorWing, setMirrorWing] = useState(false);
+  const [mirrorGap, setMirrorGap] = useState(3);
+  const [machineEntryExit, setMachineEntryExit] = useState(false);
 
   //Maschine
   const [machineActive, setMachineActive] = useState(false);
@@ -367,25 +372,41 @@ lines.forEach(line => {
     let [innerFinal, outerFinal] = window.projectProfiles(innerRotate, outerRotate, span, span);
 
     //hier noch einen endpunkt einfügen
-    const innerFinalExtra = window.addRearPoints(innerFinal[innerFinal.length - 1], 5, 1);
-    const outerFinalExtra = window.addRearPoints(outerFinal[outerFinal.length - 1], 5, 1);
-    innerFinal = [...innerFinalExtra, ...innerFinal, ...innerFinalExtra];
-    outerFinal = [ ...outerFinalExtra, ...outerFinal, ...outerFinalExtra];
+    if (hotwirePoint) {
+      const innerFinalExtra = window.addRearPoints(innerFinal[innerFinal.length - 1], 5, 1);
+      const outerFinalExtra = window.addRearPoints(outerFinal[outerFinal.length - 1], 5, 1);
+      innerFinal = [...innerFinalExtra, ...innerFinal, ...innerFinalExtra];
+      outerFinal = [ ...outerFinalExtra, ...outerFinal, ...outerFinalExtra];
+    }
 
     //ab hier spiegeln aktuell mit 3mm abstand bzw. es werden dann 6mm
-    let [innerMirrored, outerMirrored] = window.mirrorProfilesY(innerFinal, outerFinal, 3);
-    innerFinal = [...innerFinal, ...innerMirrored];
-    outerFinal = [...outerFinal, ...outerMirrored];
+    if (mirrorWing) {
+      let [innerMirrored, outerMirrored] = window.mirrorProfilesY(innerFinal, outerFinal, mirrorGap);
+      innerFinal = [...innerMirrored, ...innerFinal];
+      outerFinal = [...outerMirrored, ...outerFinal];
+    }
 
-    //exportieren für Useeffect Surface
-    setFinalProfiles({ inner: innerFinal, outer: outerFinal });    
+    //hier einfahren und ausfahren aus der maschine
+    if (machineEntryExit) {
+      innerFinal = window.addSafeTravelPoints(innerFinal, { front: mirrorGap*2, back: mirrorGap, y: mirrorGap });
+      outerFinal = window.addSafeTravelPoints(outerFinal, { front: mirrorGap*2, back: mirrorGap, y: mirrorGap });
+    }
+ 
     let [innerProjected, outerProjected] = window.projectProfiles(innerFinal, outerFinal, span, foamWidth);
 
-    //innerProjected = window.addSafeTravelPoints(innerProjected);
-    //outerProjected = window.addSafeTravelPoints(outerProjected);
-
-    const [innerProjectedMaschine, outerProjectedMaschine] = window.projectProfiles(innerProjected, outerProjected, foamWidth, hotwireLength);
+    let [innerProjectedMaschine, outerProjectedMaschine] = window.projectProfiles(innerProjected, outerProjected, foamWidth, hotwireLength);
     
+    //alle punke mit dem untersten punkt offsetten damit dieser auf 0 liegt
+    [innerFinal, outerFinal, innerProjected, outerProjected, innerProjectedMaschine, outerProjectedMaschine] =
+      window.offsetYToPositive(mirrorGap * 2, innerFinal, outerFinal, innerProjected, outerProjected, innerProjectedMaschine, outerProjectedMaschine);
+
+    //alle Punkte in X verschieben, damit das Profil im Schaum liegt
+    [innerFinal, outerFinal, innerProjected, outerProjected, innerProjectedMaschine, outerProjectedMaschine] =
+      window.shiftX(mirrorGap, innerFinal, outerFinal, innerProjected, outerProjected, innerProjectedMaschine, outerProjectedMaschine);
+
+    //exportieren für Useeffect Surface
+    setFinalProfiles({ inner: innerFinal, outer: outerFinal });   
+
     const scene = sceneRef.current;
     window.removeLine(scene, 'innerLine');
     window.removeLine(scene, 'outerLine');
@@ -448,7 +469,11 @@ lines.forEach(line => {
   foamWidth,
   hotwireLength,
   activeTab,
-  surfaceVisible
+  surfaceVisible,
+  hotwirePoint,
+  mirrorWing,
+  mirrorGap,
+  machineEntryExit
 ]);
 
 //Surface Aktivieren/Deaktivieren
@@ -774,17 +799,19 @@ useEffect(() => {
           axisYmm={axisYmm} setAxisYmm={setAxisYmm}
           hotwireLength={hotwireLength} setHotwireLength={setHotwireLength}
           speed={speed} setSpeed={setSpeed}
-
           // === Foam Block Props ===
           foamActive={foamActive} setFoamActive={setFoamActive}
           foamLength={foamLength} setFoamLength={setFoamLength}
           foamWidth={foamWidth} setFoamWidth={setFoamWidth}
           foamHeight={foamHeight} setFoamHeight={setFoamHeight}
           foamOffset={foamOffset} setFoamOffset={setFoamOffset}
-
           // === Surface Props ===
           surfaceVisible={surfaceVisible} setSurfaceVisible={setSurfaceVisible}
-
+          //spiegeln und Ausfahrpunkte
+          hotwirePoint={hotwirePoint} setHotwirePoint={setHotwirePoint}
+          mirrorWing={mirrorWing} setMirrorWing={setMirrorWing}
+          mirrorGap={mirrorGap} setMirrorGap={setMirrorGap}
+          machineEntryExit={machineEntryExit} setMachineEntryExit={setMachineEntryExit}
         />
         {/* Rechte Canvas-Box mit Tabs */}
         <div style={{flex: 1, minHeight: 0, position: 'relative'}}>

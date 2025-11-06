@@ -1148,7 +1148,7 @@ window.projectProfiles = function(innerFinal, outerFinal, currentSpan, newSpan) 
     return [innerProj, outerProj];
 };
 
-window.mirrorProfilesY = function(innerFinal, outerFinal, yOffset = 0) {
+window.mirrorProfilesY = function(innerFinal, outerFinal, yOffset = 3) {
     if (innerFinal.length !== outerFinal.length) {
         throw new Error("Profilpunktlisten müssen gleich lang sein!");
     }
@@ -1164,7 +1164,7 @@ window.mirrorProfilesY = function(innerFinal, outerFinal, yOffset = 0) {
         const inner = innerFinal[i];
         const outer = outerFinal[i];
 
-        const mirrorY = 2 * (maxY + yOffset) - inner.y;
+        const mirrorY = 2 * (maxY + yOffset/2) - inner.y;
         innerMirrored.push({
             x: inner.x,
             y: mirrorY,
@@ -1172,7 +1172,7 @@ window.mirrorProfilesY = function(innerFinal, outerFinal, yOffset = 0) {
             ...(inner.tag !== undefined && { tag: inner.tag })
         });
 
-        const mirrorYOuter = 2 * (maxY + yOffset) - outer.y;
+        const mirrorYOuter = 2 * (maxY + yOffset/2) - outer.y;
         outerMirrored.push({
             x: outer.x,
             y: mirrorYOuter,
@@ -1221,22 +1221,56 @@ window.addSafeTravelPoints = function(profilePoints, offsets = { front: 5, back:
   const approach = [
     { x: frontPoint.x - front, y: 0,        z: frontPoint.z }, // vor Profil auf Y=0
     { x: frontPoint.x - front, y: safeY,   z: frontPoint.z }, // hoch auf safeY
-    { x: backPoint.x + back,  y: safeY,   z: backPoint.z },  // vor bis hinter Profil
-    { x: backPoint.x + back,  y: backPoint.y, z: backPoint.z } // runter auf Profilhöhe hinten
+    { x: backPoint.x,  y: safeY,   z: backPoint.z },  // vor bis hinter Profil
+    //{ x: backPoint.x + back,  y: backPoint.y, z: backPoint.z } // runter auf Profilhöhe hinten
   ];
 
   // 4️⃣ Retreat Punkte (Rausfahren)
   const lastProfile = profilePoints[profilePoints.length - 1];
   const retreat = [
-    { x: backPoint.x + back,  y: backPoint.y, z: backPoint.z },       // hoch vom letzten Punkt
-    { x: backPoint.x + back,  y: safeY,   z: backPoint.z },  // vor bis hinter Profil
-    { x: frontPoint.x - front, y: safeY,   z: frontPoint.z }, // vor bis vorne
-    { x: frontPoint.x - front, y: 0,        z: frontPoint.z }      // runter auf Y=0
+    { x: backPoint.x + 1,  y: +1, z: backPoint.z },       // hoch vom letzten Punkt
+    { x: backPoint.x + 1,  y: safeY+1, z: backPoint.z },  // vor bis hinter Profil
+    { x: frontPoint.x - front-1, y: safeY+1,   z: frontPoint.z }, // vor bis vorne
+    { x: frontPoint.x - front-1, y: +1,        z: frontPoint.z }      // runter auf Y=0
   ];
 
   // 5️⃣ Gesamtes Array: Approach → Profil → Retreat
   return [...approach, ...profilePoints, ...retreat];
 };
+
+window.offsetYToPositive = function(floorOffset = 5, ...pointGroups) {
+    if (pointGroups.length === 0) return [];
+
+    // Minimalen Y-Wert aller Punktgruppen ermitteln
+    const allY = pointGroups.flatMap(group => group.map(p => p.y));
+    const minY = Math.min(...allY);
+
+    // Offset berechnen: minY unter 0 plus floorOffset
+    const offsetY = (minY < 0 ? -minY : 0) + floorOffset;
+
+    // Alle Punktgruppen verschieben
+    const shiftedGroups = pointGroups.map(group =>
+        group.map(p => ({ ...p, y: p.y + offsetY }))
+    );
+
+    return shiftedGroups;
+};
+
+window.shiftX = function(shiftX = 0, ...pointGroups) {
+    if (pointGroups.length === 0) return [];
+
+    const shiftedGroups = pointGroups.map(group =>
+        group.map(p => ({
+            ...p,
+            x: p.x + shiftX,
+            y: p.y,
+            z: p.z
+        }))
+    );
+
+    return shiftedGroups;
+};
+
 
 
 
