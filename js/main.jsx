@@ -31,6 +31,8 @@ function HotwireWing3D() {
   const [trimTEmm, setTrimTEmm] = useState(0);
 
   const [activeTab, setActiveTab] = useState(null);
+  const [gcodeOpen, setGcodeOpen] = React.useState(true);
+  const [gcode, setGcode] = React.useState('');
   const [debugOpen, setDebugOpen] = useState(false);
   const [debugPoints, setDebugPoints] = useState({ inner: [], outer: [] });
 
@@ -50,6 +52,7 @@ function HotwireWing3D() {
   const [axisYmm, setAxisYmm] = useState(500);
   const [hotwireLength, setHotwireLength] = useState(800);
   const [speed, setSpeed] = useState(200);
+  const machineLimits = { X: axisXmm, Y: axisYmm, U: axisXmm, A: axisYmm };
 
   // Foam Block
   const [foamActive, setFoamActive] = useState(false);
@@ -444,6 +447,15 @@ lines.forEach(line => {
     window.addCenterMMGrid(scene, innerFinal, outerFinal, 10, 1);
     
     setDebugPoints({ inner: innerFinal.map(p => ({x: p.x, y: p.y, tag: p.tag || null })), outer: outerFinal.map(p => ({x: p.x, y: p.y, tag: p.tag || null}))});
+
+    // G-Code erzeugen
+    //const gcode = window.generateG93FourAxis(outerProjectedMaschine, innerProjectedMaschine, machineLimits);
+    const generatedGcode = window.generateG93FourAxis(outerProjectedMaschine, innerProjectedMaschine, machineLimits);
+    setGcode(generatedGcode);
+
+    //console.log(gcode);
+
+
   }, [
   innerDAT,
   outerDAT,
@@ -787,6 +799,7 @@ useEffect(() => {
           trimEnabled={trimEnabled} setTrimEnabled={setTrimEnabled} 
           trimLEmm={trimLEmm} setTrimLEmm={setTrimLEmm} trimTEmm={trimTEmm} setTrimTEmm={setTrimTEmm}
           activeTab={activeTab} setActiveTab={setActiveTab} 
+          gcodeOpen={gcodeOpen} setGcodeOpen={setGcodeOpen} gcode={gcode}                        // <--- GCode jetzt über State
           debugOpen={debugOpen} setDebugOpen={setDebugOpen} debugPoints={debugPoints}
 
             // === Maschinendaten Props ===

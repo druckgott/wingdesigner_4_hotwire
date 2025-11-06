@@ -11,6 +11,8 @@ window.LeftPanel = function LeftPanel(props) {
     outerVerticalOffset, setOuterVerticalOffset, outerChordOffset, setOuterChordOffset,
     holes, setHoles, ailerons, setAilerons, trimEnabled, setTrimEnabled, trimLEmm, setTrimLEmm, trimTEmm, setTrimTEmm,
     activeTab, setActiveTab, debugOpen, setDebugOpen, debugPoints,
+    //Gcode
+    gcode, gcodeOpen, setGcodeOpen, 
     //Maschine
     isActive, onToggle,
     xName, setXName,
@@ -202,6 +204,15 @@ window.LeftPanel = function LeftPanel(props) {
         </div>
       )}
     </div>
+
+
+    <GCodeSection
+      gcode={gcode}        // vom useState gesetzt
+      title="Generierter GCode"
+      isOpen={gcodeOpen}
+      onToggle={() => setGcodeOpen(!gcodeOpen)}
+      fileName="wing_program.nc"
+    />
 
 
       <DebugSection debugPoints={debugPoints} innerName={innerName} outerName={outerName} isOpen={debugOpen} onToggle={() => setDebugOpen(!debugOpen)} />
