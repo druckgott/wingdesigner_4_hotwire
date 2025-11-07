@@ -52,7 +52,7 @@ function HotwireWing3D() {
   const [axisYmm, setAxisYmm] = useState(500);
   const [hotwireLength, setHotwireLength] = useState(800);
   const [speed, setSpeed] = useState(200);
-  const machineLimits = { X: axisXmm, Y: axisYmm, U: axisXmm, A: axisYmm };
+  const machineLimits = { X: axisXmm, Y: axisYmm, U: axisXmm, A: axisYmm, Fmax: 400, Fmin: 1};
 
   // Foam Block
   const [foamActive, setFoamActive] = useState(false);
@@ -450,11 +450,10 @@ lines.forEach(line => {
 
     // G-Code erzeugen
     //const gcode = window.generateG93FourAxis(outerProjectedMaschine, innerProjectedMaschine, machineLimits);
-    const generatedGcode = window.generateG93FourAxis(outerProjectedMaschine, innerProjectedMaschine, machineLimits);
+    const feed = 100;
+    const tcpOffset = { x:0, y:0, z:0 }; //Werkzeugoffset
+    const generatedGcode = window.generateG93FourAxis(outerProjectedMaschine, innerProjectedMaschine, feed, machineLimits, tcpOffset)
     setGcode(generatedGcode);
-
-    //console.log(gcode);
-
 
   }, [
   innerDAT,

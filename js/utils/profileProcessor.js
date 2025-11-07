@@ -1204,11 +1204,11 @@ window.addSafeTravelPoints = function(profilePoints, offsets = { front: 5, back:
 
   const { front, back, y } = offsets;
 
-  // 1️⃣ Max Höhe für sichere Fahrt
+  // 1 Max Höhe für sichere Fahrt
   const maxY = Math.max(...profilePoints.map(p => p.y));
   const safeY = maxY + y;
 
-  // 2️⃣ Start- & Endpunkte des Profils anhand X-Koordinate
+  // 2 Start- & Endpunkte des Profils anhand X-Koordinate
   let frontPoint = profilePoints[0];  // Punkt vorne (min X)
   let backPoint  = profilePoints[0];  // Punkt hinten (max X)
 
@@ -1217,24 +1217,24 @@ window.addSafeTravelPoints = function(profilePoints, offsets = { front: 5, back:
     if (p.x > backPoint.x)  backPoint = p;
   }
 
-  // 3️⃣ Approach Punkte (Hineinfahren)
+  // 3 Approach Punkte (Hineinfahren)
   const approach = [
-    { x: frontPoint.x - front, y: 0,        z: frontPoint.z }, // vor Profil auf Y=0
-    { x: frontPoint.x - front, y: safeY,   z: frontPoint.z }, // hoch auf safeY
-    { x: backPoint.x,  y: safeY,   z: backPoint.z },  // vor bis hinter Profil
+    { x: frontPoint.x - front, y: 0,        z: frontPoint.z, tag: PointTag.ENTRY }, // vor Profil auf Y=0
+    { x: frontPoint.x - front, y: safeY,   z: frontPoint.z, tag: PointTag.ENTRY }, // hoch auf safeY
+    { x: backPoint.x,  y: safeY,   z: backPoint.z, tag: PointTag.ENTRY },  // vor bis hinter Profil
     //{ x: backPoint.x + back,  y: backPoint.y, z: backPoint.z } // runter auf Profilhöhe hinten
   ];
 
-  // 4️⃣ Retreat Punkte (Rausfahren)
+  // 4 Retreat Punkte (Rausfahren)
   const lastProfile = profilePoints[profilePoints.length - 1];
   const retreat = [
-    { x: backPoint.x + 1,  y: +1, z: backPoint.z },       // hoch vom letzten Punkt
-    { x: backPoint.x + 1,  y: safeY+1, z: backPoint.z },  // vor bis hinter Profil
-    { x: frontPoint.x - front-1, y: safeY+1,   z: frontPoint.z }, // vor bis vorne
-    { x: frontPoint.x - front-1, y: +1,        z: frontPoint.z }      // runter auf Y=0
+    { x: backPoint.x + 1,  y: +1, z: backPoint.z, tag: PointTag.EXIT },       // hoch vom letzten Punkt
+    { x: backPoint.x + 1,  y: safeY+1, z: backPoint.z, tag: PointTag.EXIT },  // vor bis hinter Profil
+    { x: frontPoint.x - front-1, y: safeY+1,   z: frontPoint.z, tag: PointTag.EXIT }, // vor bis vorne
+    { x: frontPoint.x - front-1, y: +1,        z: frontPoint.z, tag: PointTag.EXIT }      // runter auf Y=0
   ];
 
-  // 5️⃣ Gesamtes Array: Approach → Profil → Retreat
+  // 5 Gesamtes Array: Approach → Profil → Retreat
   return [...approach, ...profilePoints, ...retreat];
 };
 
