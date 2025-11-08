@@ -175,13 +175,13 @@ window.generateG93FourAxis = function(innerPoints, outerPoints, feed = 100, mach
     lastF = F;
 
         // Debug nur für die ersten 5 und letzten 5 Punkte
-    if (i <= 3 || i > innerPoints.length - 3) {
+    /*if (i <= 3 || i > innerPoints.length - 3) {
         console.log(`Point ${i}:`);
         console.log(`  rawIstart=(${rawIstart.x},${rawIstart.y}) rawIend=(${rawIend.x},${rawIend.y})`);
         console.log(`  rawOstart=(${rawOstart.x},${rawOstart.y}) rawOend=(${rawOend.x},${rawOend.y})`);
         console.log(`  Istart=(${Istart.x.toFixed(3)},${Istart.y.toFixed(3)}) Iend=(${Iend.x.toFixed(3)},${Iend.y.toFixed(3)})`);
         console.log(`  Zstart=${Zstart.toFixed(3)} Zend=${Zend.toFixed(3)} Astart=${Astart.toFixed(3)} Aend=${Aend.toFixed(3)} F=${F.toFixed(3)}`);
-    }
+    }*/
 
     const tagComment = [
       Istart.tag ? `Istart=${Istart.tag}` : '',

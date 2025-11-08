@@ -4,7 +4,7 @@
 window.LeftPanel = function LeftPanel(props) {
   const { 
     cameraPosRef, cameraTargetRef,
-    innerDAT, outerDAT, innerName, setInnerName, outerName, setOuterName, handleFile,
+    innerDAT, setInnerDAT, outerDAT, setOuterDAT, innerName, setInnerName, outerName, setOuterName, handleFile,
     span, setSpan, profilePointsCount, setProfilePointsCount,
     innerColor, setInnerColor, innerScale, setInnerScale, thicknessScaleInner, setThicknessScaleInner, rotationInner, setRotationInner,
     outerColor, setOuterColor, outerScale, setOuterScale, thicknessScaleOuter, setThicknessScaleOuter, rotationOuter, setRotationOuter,
@@ -227,6 +227,9 @@ window.LeftPanel = function LeftPanel(props) {
     />
 
     <ExportImportSection
+      innerDAT={innerDAT} setInnerDAT={setInnerDAT}
+      outerDAT={outerDAT} setOuterDAT={setOuterDAT}
+
       xName={xName} setXName={setXName}
       yName={yName} setYName={setYName}
       zName={zName} setZName={setZName}
