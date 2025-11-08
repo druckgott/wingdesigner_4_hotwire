@@ -3,3 +3,25 @@ oder
 python.exe -m http.server 8080
 
 http://localhost:8080/
+
+hotwire-wing-3d/
+├── index.html
+├── css/
+│   └── style.css
+├── js/
+│   ├── components/
+│   │   ├── ProfileBox.jsx
+│   │   ├── HolesSection.jsx
+│   │   ├── AileronsSection.jsx
+│   │   ├── TrimSection.jsx
+│   │   └── DebugSection.jsx
+│   │   └── LeftPanel.jsx
+│   ├── utils/
+│   │   ├── datParser.js
+│   │   ├── profileProcessor.js
+│   │   └── threeHelpers.js
+│   └── main.jsx
+└── airfoil/
+    └── clarky.dat
+
+
