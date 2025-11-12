@@ -104,106 +104,129 @@ function HotwireWing3D() {
 
   // --- 3D Setup: Szene, Kamera, Renderer, OrbitControls ---
   useEffect(() => {
-    if (!canvasRef.current) return;
+  if (!canvasRef.current) return;
 
-    const width = canvasRef.current.clientWidth;
-    const height = canvasRef.current.clientHeight;
+  const width = canvasRef.current.clientWidth;
+  const height = canvasRef.current.clientHeight;
 
-    // Szene
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0xf0f0f0);
-    sceneRef.current = scene;
+  // Szene
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0xf0f0f0);
+  sceneRef.current = scene;
 
-    // Kamera
-    const camera = new THREE.PerspectiveCamera(45, width / height, 1, 10000);
-    camera.position.set(600, -span / 2, span);
-    camera.up.set(0, 0, 1);
-    camera.lookAt(0, 0, 0);
-    cameraRef.current = camera;
+  // Kamera
+  const camera = new THREE.PerspectiveCamera(45, width / height, 1, 10000);
+  camera.position.set(600, -span / 2, span);
+  camera.up.set(0, 0, 1);
+  camera.lookAt(0, 0, 0);
+  cameraRef.current = camera;
 
-    // Renderer
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(width, height);
-    canvasRef.current.innerHTML = ""; // leere vorherige Inhalte
-    canvasRef.current.appendChild(renderer.domElement);
-    rendererRef.current = renderer;
+  // Renderer
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(width, height);
+  canvasRef.current.innerHTML = "";
+  canvasRef.current.appendChild(renderer.domElement);
+  rendererRef.current = renderer;
 
-    // OrbitControls
-    const controls = new THREE.OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.1;
-    controls.enableZoom = true;
-    controls.enablePan = true;
-    controls.target.set(0, 0, 0);
-    controlsRef.current = controls;
+  // OrbitControls
+  const controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.1;
+  controls.enableZoom = true;
+  controls.enablePan = true;
+  controls.target.set(0, 0, 0);
+  controlsRef.current = controls;
 
-    // Achsenhilfe
-    const axes = new THREE.AxesHelper(40);
-    scene.add(axes);
+  // Achsenhilfe
+  const axes = new THREE.AxesHelper(40);
+  scene.add(axes);
 
-    // Marker als Sprite (z.B. für Maus-/Tag-Markierung)
-    const material = new THREE.SpriteMaterial({ color: 0x000000 });
-    const sprite = new THREE.Sprite(material);
-    sprite.scale.set(4, 4, 1);
-    sprite.visible = false;
-    scene.add(sprite);
-    markerRef.current = sprite;
+  // Marker als Sprite
+  const material = new THREE.SpriteMaterial({ color: 0x000000 });
+  const sprite = new THREE.Sprite(material);
+  sprite.scale.set(4, 4, 1);
+  sprite.visible = false;
+  scene.add(sprite);
+  markerRef.current = sprite;
 
-    // Linien-Platzhalter
-    scene.lines = { innerLine: null, outerLine: null };
+  // Linien-Platzhalter
+  scene.lines = { innerLine: null, outerLine: null };
 
-    // Animation
-    let reqId;
-    const animate = () => {
-      reqId = requestAnimationFrame(animate);
-      controls.update();
+  // --- Maus-Zoom Richtung Mauszeiger ---
+  const handleWheel = (e) => {
+    const rect = renderer.domElement.getBoundingClientRect();
+    const mouse = new THREE.Vector2(
+      ((e.clientX - rect.left) / rect.width) * 2 - 1,
+      -((e.clientY - rect.top) / rect.height) * 2 + 1
+    );
 
-        // --- Marker skalieren, damit er gleich groß bleibt ---
-      if (markerRef.current && cameraRef.current) {
-        const cam = cameraRef.current;
-        const marker = markerRef.current;
+    const raycaster = new THREE.Raycaster();
+    raycaster.setFromCamera(mouse, camera);
 
-        const distance = cam.position.distanceTo(marker.position);
-        const vFOV = cam.fov * (Math.PI / 180);
-        const height = 2 * Math.tan(vFOV / 2) * distance;
-        const rendererHeight = rendererRef.current.domElement.clientHeight;
-        const scale = (8 / rendererHeight) * height; // 8 = gewünschte Pixelgröße
-        marker.scale.set(scale, scale, 1);
-      }
+    const planeZ = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0); // XY-Ebene
+    const intersect = new THREE.Vector3();
+    raycaster.ray.intersectPlane(planeZ, intersect);
 
-      // Kamera/Target Refs updaten
-      cameraPosRef.current.x = camera.position.x;
-      cameraPosRef.current.y = camera.position.y;
-      cameraPosRef.current.z = camera.position.z;
+    if (intersect) {
+      const dir = new THREE.Vector3().subVectors(intersect, controls.target).multiplyScalar(0.2);
+      controls.target.add(dir); // Target verschieben, Kamera zoomt normal
+    }
+  };
+  renderer.domElement.addEventListener("wheel", handleWheel, { passive: true });
 
-      cameraTargetRef.current.x = controls.target.x;
-      cameraTargetRef.current.y = controls.target.y;
-      cameraTargetRef.current.z = controls.target.z;
+  // Animation
+  let reqId;
+  const animate = () => {
+    reqId = requestAnimationFrame(animate);
+    controls.update();
 
-      renderer.render(scene, camera);
-    };
+    // --- Marker skalieren, damit er gleich groß bleibt ---
+    if (markerRef.current && cameraRef.current) {
+      const cam = cameraRef.current;
+      const marker = markerRef.current;
 
-    animate();
+      const distance = cam.position.distanceTo(marker.position);
+      const vFOV = cam.fov * (Math.PI / 180);
+      const height = 2 * Math.tan(vFOV / 2) * distance;
+      const rendererHeight = rendererRef.current.domElement.clientHeight;
+      const scale = (8 / rendererHeight) * height; // 8 = gewünschte Pixelgröße
+      marker.scale.set(scale, scale, 1);
+    }
 
-    // Resize Handling
-    const handleResize = () => {
-      const w = canvasRef.current.clientWidth;
-      const h = canvasRef.current.clientHeight;
-      renderer.setSize(w, h);
-      camera.aspect = w / h;
-      camera.updateProjectionMatrix();
-    };
-    window.addEventListener("resize", handleResize);
+    // Kamera/Target Refs updaten
+    cameraPosRef.current.x = camera.position.x;
+    cameraPosRef.current.y = camera.position.y;
+    cameraPosRef.current.z = camera.position.z;
 
-    // Cleanup
-    return () => {
-      cancelAnimationFrame(reqId);
-      controls.dispose();
-      renderer.dispose();
-      scene.clear();
-      window.removeEventListener("resize", handleResize);
-    };
-  }, []);
+    cameraTargetRef.current.x = controls.target.x;
+    cameraTargetRef.current.y = controls.target.y;
+    cameraTargetRef.current.z = controls.target.z;
+
+    renderer.render(scene, camera);
+  };
+  animate();
+
+  // Resize Handling
+  const handleResize = () => {
+    const w = canvasRef.current.clientWidth;
+    const h = canvasRef.current.clientHeight;
+    renderer.setSize(w, h);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  };
+  window.addEventListener("resize", handleResize);
+
+  // Cleanup
+  return () => {
+    cancelAnimationFrame(reqId);
+    controls.dispose();
+    renderer.dispose();
+    scene.clear();
+    window.removeEventListener("resize", handleResize);
+    renderer.domElement.removeEventListener("wheel", handleWheel);
+  };
+}, []);
+
 
   //Sprachumschaltung
   useEffect(() => {
@@ -433,6 +456,8 @@ lines.forEach(line => {
     window.removeLine(scene, 'outerProjectedLine');
     window.removeLine(scene, 'innerProjectedMaschineLine');
     window.removeLine(scene, 'outerProjectedMaschineLine');
+    window.removeLine(scene, 'gcodeInnerLine');
+    window.removeLine(scene, 'gcodeOuterLine');
 
     const innerLine = window.createLine(innerFinal, -span / 2, parseInt(innerColor.slice(1), 16));
     const outerLine = window.createLine(outerFinal, span / 2, parseInt(outerColor.slice(1), 16));
@@ -440,11 +465,11 @@ lines.forEach(line => {
     const centerInnerLine = window.createLine(innerFinal, 0, parseInt(centerInnerColor.slice(1), 16));
     const centerOuterLine = window.createLine(outerFinal, 0, parseInt(centerOuterColor.slice(1), 16));
 
-    const innerProjectedLine = window.createLine(innerProjected, -foamWidth/2, parseInt(innerColor.slice(1), 16), true, 0.5);
-    const outerProjectedLine = window.createLine(outerProjected, foamWidth/2, parseInt(outerColor.slice(1), 16), true, 0.5);
+    const innerProjectedLine = window.createLine(innerProjected, -foamWidth/2, parseInt(innerColor.slice(1), 16), true, 1);
+    const outerProjectedLine = window.createLine(outerProjected, foamWidth/2, parseInt(outerColor.slice(1), 16), true, 1);
 
-    const innerProjectedMaschineLine = window.createLine(innerProjectedMaschine, -hotwireLength/2, parseInt(innerColor.slice(1), 16), true, 0.5);
-    const outerProjectedMaschineLine = window.createLine(outerProjectedMaschine, hotwireLength/2, parseInt(outerColor.slice(1), 16), true, 0.5);
+    const innerProjectedMaschineLine = window.createLine(innerProjectedMaschine, -hotwireLength/2, parseInt(innerColor.slice(1), 16), true, 1);
+    const outerProjectedMaschineLine = window.createLine(outerProjectedMaschine, hotwireLength/2, parseInt(outerColor.slice(1), 16), true, 1);
 
     scene.lines = { innerLine, outerLine, centerInnerLine, centerOuterLine, innerProjectedLine, outerProjectedLine, innerProjectedMaschineLine, outerProjectedMaschineLine };
     scene.add(innerLine);
@@ -508,6 +533,18 @@ lines.forEach(line => {
       window.generateG93Footer(axisNames)
     ].join('\n');
 
+    
+    if (activeTab === 'foam' || activeTab === 'machine') {
+      //G-Code analysieren und ebenfalls darstellen
+      const { inner: gcodeInnerPoints, outer: gcodeOuterPoints } = window.parseAndExtractGcodePoints(generatedGcode, hotwireLength);
+      const gcodeInnerLine = window.createLine(gcodeInnerPoints, (-hotwireLength / 2), 0x000000, true, 0.7);
+      const gcodeOuterLine = window.createLine(gcodeOuterPoints, (hotwireLength / 2), 0x000000, true, 0.7);
+      scene.add(gcodeInnerLine);
+      scene.add(gcodeOuterLine);
+      scene.lines.gcodeInnerLine = gcodeInnerLine;
+      scene.lines.gcodeOuterLine = gcodeOuterLine;
+    }
+    
     setGcode(generatedGcode);
 
   }, [

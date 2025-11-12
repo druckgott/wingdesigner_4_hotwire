@@ -273,7 +273,6 @@ window.LeftPanel = function LeftPanel(props) {
             <label>{t('kerfSide')}:
               <select value={kerfSide} onChange={function(e) { setKerfSide(e.target.value); }}>
                 <option value="none">{t('none') || 'None'}</option>
-                <option value="inner">{t('inner') || 'Inner'}</option>
                 <option value="outer">{t('outer') || 'Outer'}</option>
               </select>
             </label>

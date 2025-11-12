@@ -45,10 +45,10 @@ window.generateG93HeaderComments = function({
 // === Header-Funktion für G93 ===
 window.generateG93Header = function({ hotWirePower } = {}, axisNames = {}) {
 
-  const X = axisNames.X || 'X';
-  const Y = axisNames.Y || 'Y';
-  const Z = axisNames.Z || 'Z';
-  const A = axisNames.A || 'A';
+  const Xname = axisNames.X || 'X';
+  const Yname = axisNames.Y || 'Y';
+  const Zname = axisNames.Z || 'Z';
+  const Aname = axisNames.A || 'A';
 
   const lines = [
     'G17 ; XY-Ebene auswählen',
@@ -57,7 +57,7 @@ window.generateG93Header = function({ hotWirePower } = {}, axisNames = {}) {
     'G40 ; Cutter Compensation aus',
     'G49 ; Tool Length Offset abbrechen',
     'G64 ; Pfadsteuerung (Path Control Mode)',
-    `${X}0.00 ${Y}0.00 ${A}0.00 ${Z}0.00 ; Zurück zur Maschinen-Null`
+    `${Xname}0.00 ${Yname}0.00 ${Aname}0.00 ${Zname}0.00 ; Zurück zur Maschinen-Null`
   ];
 
   if (hotWirePower > 0) {
@@ -149,7 +149,7 @@ window.generateG93FourAxis = function(innerPoints, outerPoints, feed = 100, mach
   const applyKerfOffset = (p, normal, side, wireDiameter) => {
     if (side === 'none') return { ...p };
     const offset = wireDiameter / 2;
-    const factor = (side === 'outer') ? 1 : -1;
+    const factor = (side === 'outer') ? -1 : 1;
     return {
       x: p.x + normal.x * offset * factor,
       y: p.y + normal.y * offset * factor,
@@ -213,26 +213,12 @@ window.generateG93FourAxis = function(innerPoints, outerPoints, feed = 100, mach
 
     lastF = F;
 
-        // Debug nur für die ersten 5 und letzten 5 Punkte
-    /*if (i <= 3 || i > innerPoints.length - 3) {
-        console.log(`Point ${i}:`);
-        console.log(`  rawIstart=(${rawIstart.x},${rawIstart.y}) rawIend=(${rawIend.x},${rawIend.y})`);
-        console.log(`  rawOstart=(${rawOstart.x},${rawOstart.y}) rawOend=(${rawOend.x},${rawOend.y})`);
-        console.log(`  Istart=(${Istart.x.toFixed(3)},${Istart.y.toFixed(3)}) Iend=(${Iend.x.toFixed(3)},${Iend.y.toFixed(3)})`);
-        console.log(`  Zstart=${Zstart.toFixed(3)} Zend=${Zend.toFixed(3)} Astart=${Astart.toFixed(3)} Aend=${Aend.toFixed(3)} F=${F.toFixed(3)}`);
-    }*/
-
     const tagComment = [
       Istart.tag ? `Istart=${Istart.tag}` : '',
       Iend.tag   ? `Iend=${Iend.tag}`     : '',
       Ostart.tag ? `Ostart=${Ostart.tag}` : '',
       Oend.tag   ? `Oend=${Oend.tag}`     : ''
     ].filter(Boolean).join(' ; ');
-
-        // Debug nur für die ersten 5 und letzten 5 Punkte
-    //if (i <= 5 || i > innerPoints.length - 5) {
-    //    console.log(`Point ${i}: Istart=(${Istart.x.toFixed(3)},${Istart.y.toFixed(3)}) Iend=(${Iend.x.toFixed(3)},${Iend.y.toFixed(3)}) Zstart=${Zstart.toFixed(3)} Zend=${Zend.toFixed(3)} Astart=${Astart.toFixed(3)} Aend=${Aend.toFixed(3)} F=${F.toFixed(3)}`);
-    //}
 
     const line = `G1 ${Xname}${Iend.x.toFixed(3)} ${Yname}${Iend.y.toFixed(3)} ${Aname}${Aend.toFixed(3)} ${Zname}${Zend.toFixed(3)} F${F.toFixed(4)}${tagComment ? ' ; ' + tagComment : ''}`;
     lines.push(line);
@@ -241,6 +227,37 @@ window.generateG93FourAxis = function(innerPoints, outerPoints, feed = 100, mach
   lines.push('G94');
   return lines.join('\n');
 };
+
+window.parseAndExtractGcodePoints = function(gcodeText, hotwireLength = 10, debug = false) {
+  const inner = [];
+  const outer = [];
+
+  const lines = gcodeText.split(/\r?\n/);
+
+  for (const raw of lines) {
+    if (!raw.startsWith("G1")) continue;
+
+    let X = 0, Y = 0, Z = 0, A = 0;
+
+    const matches = raw.matchAll(/([XYZA])([-+]?\d*\.?\d+)/ig);
+    for (const m of matches) {
+      const axis = m[1].toUpperCase();
+      const value = parseFloat(m[2]);
+      if (axis === 'X') X = value;
+      else if (axis === 'Y') Y = value;
+      else if (axis === 'Z') Z = value;
+      else if (axis === 'A') A = value;
+    }
+
+    inner.push({ x: X, y: Y, z: -hotwireLength / 2 });
+    outer.push({ x: A, y: Z, z: hotwireLength / 2 });
+  }
+
+  return { inner, outer };
+};
+
+
+
 
 
 

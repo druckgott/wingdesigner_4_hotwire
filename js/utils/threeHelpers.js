@@ -1,4 +1,13 @@
-window.createLine = function(pts, yOffset, color, dashed = false, opacity = 1) {
+window.createLine = function(
+    pts,
+    yOffset,
+    color,
+    dashed = false,
+    opacity = 1,
+    linewidth = 1,
+    dashSize = 1,
+    gapSize = 0.5
+) {
     const geometry = new THREE.BufferGeometry();
     const vertices = [];
     pts.forEach(p => vertices.push(p.x, yOffset, p.y));
@@ -8,27 +17,26 @@ window.createLine = function(pts, yOffset, color, dashed = false, opacity = 1) {
     if (dashed) {
         material = new THREE.LineDashedMaterial({
             color: color,
-            dashSize: 1,     // Länge der Striche
-            gapSize: 0.5,    // Abstand zwischen Strichen
-            linewidth: 1,
-            transparent: true,
+            dashSize: dashSize,
+            gapSize: gapSize,
+            linewidth: linewidth,
+            transparent: opacity < 1,
             opacity: opacity
         });
     } else {
         material = new THREE.LineBasicMaterial({
             color: color,
+            linewidth: linewidth,
             transparent: opacity < 1,
             opacity: opacity
         });
     }
 
     const line = new THREE.Line(geometry, material);
-
     if (dashed) line.computeLineDistances(); // Wichtig für gestrichelte Linien
 
     return line;
 };
-
 
 window.removeLine = function(scene, lineName) {
   if (scene.lines && scene.lines[lineName]) {
