@@ -89,6 +89,8 @@ window.LeftPanel = function LeftPanel(props) {
   var setHotwireLength = props.setHotwireLength;
   var speed = props.speed;
   var setSpeed = props.setSpeed;
+  var foamActive = props.foamActive;
+  var setFoamActive = props.setFoamActive;
   var foamLength = props.foamLength;
   var setFoamLength = props.setFoamLength;
   var foamWidth = props.foamWidth;
@@ -290,6 +292,9 @@ window.LeftPanel = function LeftPanel(props) {
         }}>{t('foamBlock')}</div>
         {activeTab === 'foam' && (
           <div className="profile-content">
+            <label>
+              <input type="checkbox" checked={foamActive} onChange={(e) => setFoamActive(e.target.checked)} />{t('showFoam')}
+            </label>
             <label>{t('length')} (mm): <input type="number" value={foamLength} onChange={function(e) { setFoamLength(Number(e.target.value)); }} /></label>
             <label>{t('width')} (mm): <input type="number" value={foamWidth} onChange={function(e) { setFoamWidth(Number(e.target.value)); }} /></label>
             <label>{t('height')} (mm): <input type="number" value={foamHeight} onChange={function(e) { setFoamHeight(Number(e.target.value)); }} /></label>

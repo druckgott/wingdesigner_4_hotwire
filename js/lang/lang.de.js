@@ -48,6 +48,7 @@ window.langDE = {
   foamBlock: "Foam Block",
   width: "Breite",
   height: "Höhe",
+  showFoam: "Schaum anzeigen",
 
   // --- GCode & Simulation & Sonstiges ---
   gcode: "Generierter GCode",

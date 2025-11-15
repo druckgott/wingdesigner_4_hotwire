@@ -39,6 +39,7 @@ window.langEN = {
   kerfSide: "Kerf side",
 
   foamBlock: "Foam block",
+  showFoam: "Show foam",
   width: "Width",
   height: "Height",
 

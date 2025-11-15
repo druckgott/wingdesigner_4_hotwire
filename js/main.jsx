@@ -63,10 +63,10 @@ function HotwireWing3D() {
   const [kerfSide, setKerfSide] = useState('none'); // Kerf-Seite: 'inner', 'outer' oder 'none'
 
   // Foam Block
-  const [foamActive, setFoamActive] = useState(false);
-  const [foamLength, setFoamLength] = useState(1000); // mm
+  const [foamActive, setFoamActive] = useState(true);
+  const [foamLength, setFoamLength] = useState(300); // mm
   const [foamWidth, setFoamWidth] = useState(600);   // mm
-  const [foamHeight, setFoamHeight] = useState(300); // mm
+  const [foamHeight, setFoamHeight] = useState(100); // mm
 
   const canvasRef = useRef(null);
   const sceneRef = useRef(null);
@@ -490,14 +490,9 @@ lines.forEach(line => {
 
     window.addCenterMMGrid(scene, innerFinal, outerFinal, 10, 1);
     
-    //setDebugPoints({ inner: innerFinal.map(p => ({x: p.x, y: p.y, tag: p.tag || null })), outer: outerFinal.map(p => ({x: p.x, y: p.y, tag: p.tag || null}))});
     setDebugPoints({ inner: innerFinal.map(p => ({x: p.x, y: p.y, tag: p.tag || null })), outer: outerFinal.map(p => ({x: p.x, y: p.y, tag: p.tag || null}))});
+    
     // G-Code erzeugen
-    //const gcode = window.generateG93FourAxis(outerProjectedMaschine, innerProjectedMaschine, machineLimits);
-
-    //const generatedGcode = window.generateG93FourAxis(outerProjectedMaschine, innerProjectedMaschine, feed, machineLimits, tcpOffset)
-    //setGcode(generatedGcode);
-    //const feed = 100;
     const tcpOffset = { x:0, y:0, z:0 }; //Werkzeugoffset
 
     const generatedGcode = [
@@ -541,9 +536,8 @@ lines.forEach(line => {
 
     if (activeTab === 'foam' || activeTab === 'machine') {
       //G-Code analysieren und ebenfalls darstellen
-      const { inner: gcodeInnerPoints, outer: gcodeOuterPoints } = window.parseAndExtractGcodePoints(generatedGcode, hotwireLength);
+      const { gcodeInnerPoints, gcodeOuterPoints } = window.parseAndExtractGcodePoints(generatedGcode, hotwireLength);
 
-      //const { inner: gcodeInnerPoints, outer: gcodeOuterPoints } = window.parseAndExtractGcodePoints(generatedGcode, hotwireLength);
       const gcodeInnerLine = window.createLine(gcodeInnerPoints, (-hotwireLength / 2), 0x000000, true, 0.7);
       const gcodeOuterLine = window.createLine(gcodeOuterPoints, (hotwireLength / 2), 0x000000, true, 0.7);
       scene.add(gcodeInnerLine);
@@ -588,6 +582,7 @@ lines.forEach(line => {
   outerColor,
   centerInnerColor,
   centerOuterColor,
+  foamActive,
   foamWidth,
   hotwireLength,
   activeTab,
@@ -719,6 +714,9 @@ useEffect(() => {
       scene.foamBlock.material.dispose();
       delete scene.foamBlock;
     }
+
+    //wenn Foam nicht aktiv dann abbrechen
+    if (!foamActive) return;
 
     // Sichtbar nur, wenn mindestens einer aktiv ist
     if (activeTab !== 'foam' && activeTab !== 'machine') return;

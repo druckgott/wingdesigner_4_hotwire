@@ -224,7 +224,7 @@ window.generateG93FourAxis = function(innerPoints, outerPoints, feed = 100, mach
   return lines.join('\n');
 };
 
-window.parseAndExtractGcodePoints = function(gcodeText, hotwireLength = 10, debug = false) {
+window.parseAndExtractGcodePoints = function(gcodeText, hotwireLength = 10) {
   const inner = [];
   const outer = [];
 
@@ -249,7 +249,7 @@ window.parseAndExtractGcodePoints = function(gcodeText, hotwireLength = 10, debu
     outer.push({ x: A, y: Z, z: hotwireLength / 2 });
   }
 
-  return { inner, outer };
+  return { gcodeInnerPoints: inner, gcodeOuterPoints: outer };
 };
 
 
