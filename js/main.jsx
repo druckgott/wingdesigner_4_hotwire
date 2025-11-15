@@ -523,6 +523,7 @@ lines.forEach(line => {
         foamHeight: foamHeight,
         wireDiameter: wireDiameter,
         kerfSide: kerfSide,
+        hotwireLength: hotwireLength,
       }),
       window.generateG93Header({ hotWirePower }, axisNames), // 1000 = volle Heizleistung
       window.generateG93FourAxis(
@@ -556,9 +557,6 @@ lines.forEach(line => {
       // Nur neu starten, wenn simulateCut aktiv ist
       if (simulateCut) {
         window.startHotwireSimulation(scene, gcodeInnerPoints, gcodeOuterPoints, hotwireLength, speedMultiplier);
-          console.log("=== Hotwire Simulation Speed Log ===");
-          console.log("speedMultiplier:", speedMultiplier);
-          console.log("====================================");
       } 
 
       // Cleanup beim Unmount oder Effekt-Abbruch

@@ -22,17 +22,18 @@ window.generateG93HeaderComments = function({
   foamWidth,
   foamHeight,
   wireDiameter,
-  kerfSide
+  kerfSide,
+  hotwireLength
 } = {}) {
   const lines = [
-    `; Wing root airfoil: ${innerName}, scale: ${innerScale}%, rotation: ${rotationInner}°, thickness scale: ${thicknessScaleInner}`,
-    `; Wing tip airfoil: ${outerName}, scale: ${outerScale}%, rotation: ${rotationOuter}°, thickness scale: ${thicknessScaleOuter}`,
+    `; Wing root airfoil: ${innerName}, scale: ${innerScale}mm, rotation: ${rotationInner}°, thickness scale: ${thicknessScaleInner}`,
+    `; Wing tip airfoil: ${outerName}, scale: ${outerScale}mm, rotation: ${rotationOuter}°, thickness scale: ${thicknessScaleOuter}`,
     `; Wing tip chord offset: ${outerChordOffset} mm, vertical offset: ${outerVerticalOffset} mm`,
     `; Wing span length: ${span} mm`,
     `; Foam block width: ${foamWidth} mm`,
     `; Foam block height: ${foamHeight} mm`,
     `; Foam block length: ${foamLength} mm`,
-    `; Machine ${axisNames.X || 'X'}/${axisNames.Y || 'Y'} axis length: ${axisXmm} / ${axisYmm} mm`,
+    `; Machine ${axisNames.X || 'X'}/${axisNames.Y || 'Y'} axis length: ${axisXmm} / ${axisYmm} mm, hotwireLength length: ${hotwireLength} mm`, 
     `; Cutting speed: ${speed} mm/min`,
     `; Hot wire relay control: ${hotWirePower > 0 ? 'ON' : 'OFF'}`,
     `; Wire diameter: ${wireDiameter} mm`,
@@ -184,11 +185,6 @@ window.generateG93FourAxis = function(innerPoints, outerPoints, feed = 100, mach
     const Iend   = applyTCPAndLimits(applyKerfOffset(rawIend,   normalInner, kerfSide, wireDiameter));
     const Ostart = applyTCPAndLimits(applyKerfOffset(rawOstart, normalOuter, kerfSide, wireDiameter));
     const Oend   = applyTCPAndLimits(applyKerfOffset(rawOend,   normalOuter, kerfSide, wireDiameter));
-
-    /*const Istart = applyTCPAndLimits(innerPoints[i - 1]);
-    const Iend   = applyTCPAndLimits(innerPoints[i]);
-    const Ostart = outerPoints[i - 1];
-    const Oend   = outerPoints[i];*/
 
     // Korrektur: Z und A Werte richtig zuweisen
     let { z: Zstart, a: Astart } = clipRotary(Ostart.y, Ostart.x);
