@@ -1270,16 +1270,19 @@ window.offsetYToPositive = function(floorOffset = 5, ...pointGroups) {
     return shiftedGroups;
 };
 
-window.shiftX = function(shiftX = 0, ...pointGroups) {
+window.offsetXToPositive = function(floorOffset = 5, ...pointGroups) {
     if (pointGroups.length === 0) return [];
 
+    // Minimalen X-Wert aller Punktgruppen ermitteln
+    const allX = pointGroups.flatMap(group => group.map(p => p.x));
+    const minX = Math.min(...allX);
+
+    // Offset berechnen: minX unter 0 plus floorOffset
+    const offsetX = (minX < 0 ? -minX : 0) + floorOffset;
+
+    // Alle Punktgruppen verschieben
     const shiftedGroups = pointGroups.map(group =>
-        group.map(p => ({
-            ...p,
-            x: p.x + shiftX,
-            y: p.y,
-            z: p.z
-        }))
+        group.map(p => ({ ...p, x: p.x + offsetX }))
     );
 
     return shiftedGroups;

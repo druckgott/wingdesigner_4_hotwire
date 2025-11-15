@@ -447,7 +447,7 @@ lines.forEach(line => {
 
     //alle Punkte in X verschieben, damit das Profil im Schaum liegt
     [innerFinal, outerFinal, innerProjected, outerProjected, innerProjectedMaschine, outerProjectedMaschine] =
-      window.shiftX(mirrorGap*2, innerFinal, outerFinal, innerProjected, outerProjected, innerProjectedMaschine, outerProjectedMaschine);
+      window.offsetXToPositive(mirrorGap*2, innerFinal, outerFinal, innerProjected, outerProjected, innerProjectedMaschine, outerProjectedMaschine);
 
     //exportieren für Useeffect Surface
     setFinalProfiles({ inner: innerFinal, outer: outerFinal });   
