@@ -7,28 +7,31 @@ window.hotwireSim = window.hotwireSim || {
   cones: [],
   frame: null,
   lastTime: null,
-  speedMultiplier: 1
+  speedMultiplier: 1,
+  trailLength: 50
 };
 
 // --- startHotwireSimulation: NUR Speed ändern, wenn läuft ---
-window.startHotwireSimulation = function(scene, innerPts, outerPts, hotwireLength, speedMultiplier = 1) {
+window.startHotwireSimulation = function(scene, innerPts, outerPts, hotwireLength, speedMultiplier = 1, trailLength = 50) {
   if (!scene || !innerPts?.length || !outerPts?.length) return;
-
   const total = Math.min(innerPts.length, outerPts.length);
-  const trailLength = 50;
 
-  // --- FALL 1: Simulation läuft → NUR Speed ändern ---
+  //erstmal fix, weil dynamisch nicht funktioniert
+  const FIXED_TRAIL_LENGTH = 50; // <- hier feste Länge
+  window.hotwireSim.trailLength = FIXED_TRAIL_LENGTH;
+
+  // --- FALL 1: Simulation läuft → NUR Speed & trailLength ändern ---
   if (window.hotwireSim.running) {
     window.hotwireSim.speedMultiplier = speedMultiplier;
-    // lastTime bleibt → kein Ruckeln
+    window.hotwireSim.trailLength = trailLength;
     return;
   }
 
   // --- FALL 2: ECHTER NEUSTART (z. B. nach stop oder erstmalig) ---
-  // Nur hier: alles aufräumen + index = 0
   window.stopHotwireSimulation(scene);
   window.hotwireSim.running = true;
   window.hotwireSim.speedMultiplier = speedMultiplier;
+  window.hotwireSim.trailLength = trailLength;
   window.hotwireSim.index = 0;
   window.hotwireSim.lastTime = performance.now();
 
@@ -63,11 +66,28 @@ window.startHotwireSimulation = function(scene, innerPts, outerPts, hotwireLengt
   surfaceGeometry.setAttribute('position', new THREE.BufferAttribute(surfacePositions, 3));
   surfaceGeometry.setIndex(new THREE.BufferAttribute(surfaceIndices, 1));
   surfaceGeometry.setDrawRange(0, 0);
-  const surfaceMaterial = new THREE.MeshBasicMaterial({
-    color: 0x00ffcc,
+
+  // --- Neues Material: oben blau, unten orange, glänzend ---
+  const surfaceMaterial = new THREE.MeshStandardMaterial({
+    color: 0x0000ff,
+    metalness: 0.7,
+    roughness: 0.2,
     transparent: true,
-    opacity: 0.5,
-    side: THREE.DoubleSide
+    opacity: 0.8,
+    side: THREE.DoubleSide,
+    onBeforeCompile: shader => {
+      shader.fragmentShader = shader.fragmentShader.replace(
+        '#include <dithering_fragment>',
+        `
+        if (gl_FrontFacing) {
+          gl_FragColor.rgb = vec3(0.0, 0.0, 1.0); // Blau oben
+        } else {
+          gl_FragColor.rgb = vec3(1.0, 0.5, 0.0); // Orange unten
+        }
+        #include <dithering_fragment>
+        `
+      );
+    }
   });
   const surfaceMesh = new THREE.Mesh(surfaceGeometry, surfaceMaterial);
   scene.add(surfaceMesh);
@@ -102,11 +122,9 @@ window.startHotwireSimulation = function(scene, innerPts, outerPts, hotwireLengt
 
   function animate() {
     if (!window.hotwireSim.running) return;
-
     const now = performance.now();
     const delta = now - window.hotwireSim.lastTime;
     window.hotwireSim.lastTime = now;
-
     const speed = window.hotwireSim.speedMultiplier;
     window.hotwireSim.index += speed * 60 * (delta / 1000);
     const i = Math.floor(window.hotwireSim.index) % total;
@@ -127,30 +145,55 @@ window.startHotwireSimulation = function(scene, innerPts, outerPts, hotwireLengt
     line.mesh.geometry.attributes.position.needsUpdate = true;
     line.mesh.geometry.attributes.color.needsUpdate = true;
 
-    // --- SURFACE ---
+    // --- SURFACE: Live trailLength-Anpassung mit korrektem Buffer + Indizes ---
     const s = window.hotwireSim.surface;
-    const sPos = s.positions;
+    const trail = window.hotwireSim.trailLength;
+
+    // 1. Buffer erweitern, wenn nötig
+    if (trail * 6 > s.positions.length) {
+      const newSize = trail * 6;
+      const newPositions = new Float32Array(newSize);
+      newPositions.set(s.positions);
+      s.positions = newPositions;
+      s.mesh.geometry.setAttribute('position', new THREE.BufferAttribute(newPositions, 3));
+
+      // 2. Indizes neu bauen für neue Größe
+      const maxSegments = trail - 1;
+      const newIndices = new Uint32Array(maxSegments * 6);
+      let m = 0;
+      for (let seg = 0; seg < maxSegments; seg++) {
+        const base = seg * 2;
+        newIndices[m++] = base + 0; newIndices[m++] = base + 1; newIndices[m++] = base + 2;
+        newIndices[m++] = base + 1; newIndices[m++] = base + 3; newIndices[m++] = base + 2;
+      }
+      s.mesh.geometry.setIndex(new THREE.BufferAttribute(newIndices, 1));
+    }
+
+    let sPos = s.positions;
     const head = s.head;
 
+    // 3. Ringbuffer: Daten nach hinten schieben (effizient mit copyWithin)
     for (let j = sPos.length - 6; j >= 6; j -= 6) {
-      sPos[j]     = sPos[j - 6];
-      sPos[j + 1] = sPos[j - 5];
-      sPos[j + 2] = sPos[j - 4];
-      sPos[j + 3] = sPos[j - 3];
-      sPos[j + 4] = sPos[j - 2];
-      sPos[j + 5] = sPos[j - 1];
+      sPos.copyWithin(j, j - 6, j);
     }
+
+    // 4. Neue Positionen am Kopf einfügen
     sPos[0] = v1.x; sPos[1] = v1.y; sPos[2] = v1.z;
     sPos[3] = v2.x; sPos[4] = v2.y; sPos[5] = v2.z;
 
-    s.head = (head + 1) % trailLength;
-    if (s.numLines < trailLength) s.numLines++;
+    s.head = (head + 1) % trail;
+    if (s.numLines < trail) s.numLines++;
+
+    // 5. DrawRange & Update
     s.mesh.geometry.setDrawRange(0, (s.numLines - 1) * 6);
     s.mesh.geometry.attributes.position.needsUpdate = true;
+    s.mesh.geometry.computeBoundingSphere(); // Für korrektes Culling
 
     // --- Kegel ---
     const leftDir = new THREE.Vector3().subVectors(v2, v1).normalize();
     const rightDir = new THREE.Vector3().subVectors(v1, v2).normalize();
+    const coneLeft = window.hotwireSim.cones[0];
+    const coneRight = window.hotwireSim.cones[1];
     coneLeft.position.copy(v1);
     coneRight.position.copy(v2);
     coneLeft.lookAt(v1.clone().add(leftDir));
@@ -158,7 +201,6 @@ window.startHotwireSimulation = function(scene, innerPts, outerPts, hotwireLengt
 
     window.hotwireSim.frame = requestAnimationFrame(animate);
   }
-
   animate();
 };
 
@@ -186,15 +228,16 @@ window.stopHotwireSimulation = function(scene) {
     });
   }
 
-  // index bleibt für Neustart erhalten
+  // Nur index & trailLength behalten
   window.hotwireSim = {
     running: false,
-    index: window.hotwireSim.index,
+    index: window.hotwireSim.index || 0,
     line: null,
     surface: null,
     cones: [],
     frame: null,
     lastTime: null,
-    speedMultiplier: 1
+    speedMultiplier: window.hotwireSim.speedMultiplier || 1,
+    trailLength: window.hotwireSim.trailLength || 50
   };
 };

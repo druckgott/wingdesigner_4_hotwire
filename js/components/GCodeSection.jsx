@@ -19,6 +19,9 @@ window.GCodeSection = function GCodeSection(props) {
   var setSpeedMultiplier = props.setSpeedMultiplier;
   var activeTab = props.activeTab;
   var setActiveTab = props.setActiveTab;
+  var tailLengthSimu = props.tailLengthSimu;
+  var setTailLengthSimu = props.setTailLengthSimu;
+  var trailLengthMax = props.trailLengthMax;
 
   // WICHTIG: Reagiere auf Sprachwechsel!
   var langVersion = props.langVersion || 0;
@@ -66,6 +69,11 @@ window.GCodeSection = function GCodeSection(props) {
           <label>{t('speedMultiplier')} (-) {speedMultiplier.toFixed(2)}x</label>
           <input type="range" min="0.01" max="5" step="0.01" value={speedMultiplier} onChange={(e) => setSpeedMultiplier(parseFloat(e.target.value))} />
         </div>
+        {/*<div className="profile-content">
+          <label>{t('tailLength')} </label>
+          <input type="range" min="1" max={trailLengthMax} step="1" value={tailLengthSimu} onChange={(e) => setTailLengthSimu(parseInt(e.target.value))}/>
+          <span>{tailLengthSimu}</span> {trailLengthMax}
+        </div> */}
       </div>
     )}
 

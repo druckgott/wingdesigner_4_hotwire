@@ -123,6 +123,9 @@ window.LeftPanel = function LeftPanel(props) {
   var setSimulateCut = props.setSimulateCut;
   var speedMultiplier = props.speedMultiplier;
   var setSpeedMultiplier = props.setSpeedMultiplier;
+  var tailLengthSimu = props.tailLengthSimu;
+  var setTailLengthSimu = props.setTailLengthSimu;
+  var trailLengthMax = props.trailLengthMax;
 
   return (
     <div style={{ flex: '0 0 500px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -311,6 +314,8 @@ window.LeftPanel = function LeftPanel(props) {
         simulateCut={simulateCut} setSimulateCut={setSimulateCut}
         speedMultiplier={speedMultiplier} setSpeedMultiplier={setSpeedMultiplier}
         activeTab={activeTab} setActiveTab={setActiveTab}
+        tailLengthSimu={tailLengthSimu} setTailLengthSimu={setTailLengthSimu}
+        trailLengthMax={trailLengthMax}
       />
 
       <ExportImportSection

@@ -85,6 +85,8 @@ function HotwireWing3D() {
   //Simulation
   const [simulateCut, setSimulateCut] = useState(false);
   const [speedMultiplier, setSpeedMultiplier] = useState(1);
+  const [tailLengthSimu, setTailLengthSimu] = useState(50);
+  const [trailLengthMax, setTrailLengthMax] = useState(50);
   
 
   useEffect(() => {
@@ -545,13 +547,16 @@ lines.forEach(line => {
       scene.lines.gcodeInnerLine = gcodeInnerLine;
       scene.lines.gcodeOuterLine = gcodeOuterLine;
     
+      setTrailLengthMax(Math.min(gcodeInnerPoints.length, gcodeOuterPoints.length));
+
       // Simulation
       if (!simulateCut) {
         window.stopHotwireSimulation(scene);
         return;
       }
       if (!window.hotwireSim.running) {
-        window.startHotwireSimulation(scene, gcodeInnerPoints, gcodeOuterPoints, hotwireLength, speedMultiplier);
+        window.startHotwireSimulation(scene, gcodeInnerPoints, gcodeOuterPoints, hotwireLength, speedMultiplier, 50);
+        //window.startHotwireSimulation(scene, gcodeInnerPoints, gcodeOuterPoints, hotwireLength, speedMultiplier, tailLengthSimu);
       } else {
         window.hotwireSim.speedMultiplier = speedMultiplier;
       }
@@ -604,7 +609,9 @@ lines.forEach(line => {
   aName,
   wireDiameter,
   kerfSide,
-  simulateCut, 
+  simulateCut,
+  trailLengthMax,
+  //tailLengthSimu, 
   //speedMultiplier 
 ]);
 
@@ -614,6 +621,13 @@ useEffect(() => {
     window.hotwireSim.speedMultiplier = speedMultiplier;
   }
 }, [speedMultiplier]); // Nur dieser Effekt reagiert auf Slider!
+
+// Simulation 3. TAIL-LENGTH-EFFEKT
+/*useEffect(() => {
+  if (window.hotwireSim && window.hotwireSim.running) {
+    window.hotwireSim.trailLength = tailLengthSimu;
+  }
+}, [tailLengthSimu]);*/
 
 //Surface Aktivieren/Deaktivieren
 useEffect(() => {
@@ -962,6 +976,8 @@ useEffect(() => {
           //simulation
           simulateCut={simulateCut} setSimulateCut={setSimulateCut}
           speedMultiplier={speedMultiplier}  setSpeedMultiplier={setSpeedMultiplier}
+          tailLengthSimu={tailLengthSimu} setTailLengthSimu={setTailLengthSimu}
+          trailLengthMax={trailLengthMax}
         />
         {/* Rechte Canvas-Box mit Tabs */}
         <div style={{flex: 1, minHeight: 0, position: 'relative'}}>
