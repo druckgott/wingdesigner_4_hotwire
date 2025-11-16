@@ -545,16 +545,19 @@ lines.forEach(line => {
       scene.lines.gcodeInnerLine = gcodeInnerLine;
       scene.lines.gcodeOuterLine = gcodeOuterLine;
     
-      // Stoppe alte Simulation immer
-      window.stopHotwireSimulation(scene);
-
-      // Nur neu starten, wenn simulateCut aktiv ist
-      if (simulateCut) {
+      // Simulation
+      if (!simulateCut) {
+        window.stopHotwireSimulation(scene);
+        return;
+      }
+      if (!window.hotwireSim.running) {
         window.startHotwireSimulation(scene, gcodeInnerPoints, gcodeOuterPoints, hotwireLength, speedMultiplier);
-      } 
-
-      // Cleanup beim Unmount oder Effekt-Abbruch
-      return () => window.stopHotwireSimulation(scene)
+      } else {
+        window.hotwireSim.speedMultiplier = speedMultiplier;
+      }
+      return () => {
+        window.stopHotwireSimulation(scene);
+      };
   }
 
 
@@ -602,27 +605,15 @@ lines.forEach(line => {
   wireDiameter,
   kerfSide,
   simulateCut, 
-  speedMultiplier 
+  //speedMultiplier 
 ]);
 
-
-  //Simulation
-/*useEffect(() => {
-  if (!sceneRef.current || gcodeInnerPoints.length === 0 || gcodeOuterPoints.length === 0) return;
-  const scene = sceneRef.current;
-
-  // Stoppe alte Simulation immer
-  window.stopHotwireSimulation(scene);
-
-  // Nur neu starten, wenn simulateCut aktiv ist
-  if (simulateCut) {
-    window.startHotwireSimulation(scene, gcodeInnerPoints, gcodeOuterPoints, hotwireLength, effectiveSpeed);
-  } 
-
-  // Cleanup beim Unmount oder Effekt-Abbruch
-  return () => window.stopHotwireSimulation(scene);
-}, [simulateCut, speedMultiplier, effectiveSpeed, gcodeInnerPoints, gcodeOuterPoints, hotwireLength, wireDiameter, kerfSide]);
-*/
+// Simulation 2. SPEED-EFFEKT: NUR Speed ändern, wenn Slider bewegt wird
+useEffect(() => {
+  if (window.hotwireSim && window.hotwireSim.running) {
+    window.hotwireSim.speedMultiplier = speedMultiplier;
+  }
+}, [speedMultiplier]); // Nur dieser Effekt reagiert auf Slider!
 
 //Surface Aktivieren/Deaktivieren
 useEffect(() => {
