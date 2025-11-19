@@ -211,7 +211,7 @@ window.LeftPanel = function LeftPanel(props) {
           <input type="range" min="0.5" max="1.5" step="0.01" value={thicknessScaleInner} onChange={function(e) { setThicknessScaleInner(Number(e.target.value)); }} />
         </label>
         <label>{t('rotation')} (°)
-          <input type="number" step="1" min="-25" max="25" value={Math.round(rotationInner * 180 / Math.PI)} onChange={function(e) { setRotationInner(Number(e.target.value) * Math.PI / 180); }} />
+          <input type="number" step="0.01" min="-25" max="25" value={Math.round(rotationInner * 180 / Math.PI)} onChange={function(e) { setRotationInner(Number(e.target.value) * Math.PI / 180); }} />
           <input type="range" min="-25" max="25" value={Math.round(rotationInner * 180 / Math.PI)} onChange={function(e) { setRotationInner(Number(e.target.value) * Math.PI / 180); }} />
         </label>
       </ProfileBox>
@@ -230,8 +230,8 @@ window.LeftPanel = function LeftPanel(props) {
           <input type="number" step="0.01" min="0.5" max="1.5" value={thicknessScaleOuter} onChange={function(e) { setThicknessScaleOuter(Number(e.target.value)); }} />
           <input type="range" min="0.5" max="1.5" step="0.01" value={thicknessScaleOuter} onChange={function(e) { setThicknessScaleOuter(Number(e.target.value)); }} />
         </label>
-        <label>{t('rotation')} (°)
-          <input type="number" step="1" min="-25" max="25" value={Math.round(rotationOuter * 180 / Math.PI)} onChange={function(e) { setRotationOuter(Number(e.target.value) * Math.PI / 180); }} />
+        <label>{t('rotation_outer')} (°)
+          <input type="number" step="0.01" min="-25" max="25" value={Math.round(rotationOuter * 180 / Math.PI)} onChange={function(e) { setRotationOuter(Number(e.target.value) * Math.PI / 180); }} />
           <input type="range" min="-25" max="25" value={Math.round(rotationOuter * 180 / Math.PI)} onChange={function(e) { setRotationOuter(Number(e.target.value) * Math.PI / 180); }} />
         </label>
         <label>{t('vertical')} (mm)

@@ -27,6 +27,7 @@ window.langDE = {
   length: "Länge",
   thickness: "Dicke",
   rotation: "Rotation",
+  rotation_outer: "Rotation",
   vertical: "Vertikal",
   chord: "Chord",
 

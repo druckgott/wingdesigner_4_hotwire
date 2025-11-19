@@ -4,8 +4,8 @@ window.langEN = {
   camera: "Camera",
   target: "Target",
 
-  innerDAT: "Inner DAT",
-  outerDAT: "Outer DAT",
+  innerDAT: "Root DAT",
+  outerDAT: "Tip DAT",
 
   span: "Wingspan",
   pointsPerProfile: "Points per profile",
@@ -16,14 +16,15 @@ window.langEN = {
   mirrorGapText: "Gap front, mirror surfaces (if active), bottom (mm)",
   machineEntryExit: "Machine entry/exit",
 
-  innerProfile: "Inner profile",
-  outerProfile: "Outer profile",
+  innerProfile: "Root Airfoil",
+  outerProfile: "Tip Profile",
   color: "Color",
-  length: "Length",
-  thickness: "Thickness",
-  rotation: "Rotation",
-  vertical: "Vertical",
-  chord: "Chord",
+  length: "Chord",
+  thickness: "Scale",
+  rotation: "Twist",
+  rotation_outer: "Washout (negative)",
+  vertical: "Dihedral",
+  chord: "LE Sweep",
 
   machineData: "Machine data",
   left: "left",
