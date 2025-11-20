@@ -5,26 +5,24 @@ on:
     branches: [ main ]
 
 permissions:
-  contents: write   # ❗ wichtig, sonst exit code 128!
+  contents: write
 
 jobs:
   write-hash:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}   # ❗ für push nötig
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Write commit hash to file
-        run: |
-          echo "${{ github.sha }}" > commit.txt
+        run: echo "${{ github.sha }}" > commit.txt
 
       - name: Commit and push changes
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
           git add commit.txt
-          git diff --quiet && echo "No changes to commit" && exit 0
-          git commit -m "Update commit hash to ${{ github.sha }}"
+          # Commit nur, wenn Änderungen existieren
+          git diff --cached --quiet || git commit -m "Update commit hash to ${{ github.sha }}"
           git push
