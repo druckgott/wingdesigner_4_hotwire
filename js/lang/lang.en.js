@@ -79,7 +79,11 @@ window.langEN = {
   trimSection: "Trim Airfoil",
   trimEnabled: "Enable Trim",
   trimLE: "Leading Edge (LE)",
+  leadingEdgeHeightInner: "LE Height Inner",
+  leadingEdgeHeightOuter: "LE Height Outer",
   trimTE: "Trailing Edge (TE)",
+  trailingEdgeHeightInner: "TE Height Inner",
+  trailingEdgeHeightOuter: "TE Height Outer",
 
   gcodeSection: "GCode",
   start: "Simulation Start",

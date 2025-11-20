@@ -8,6 +8,8 @@ function HotwireWing3D() {
   const [innerScale, setInnerScale] = useState(100);
   const [thicknessScaleInner, setThicknessScaleInner] = useState(1.0);
   const [rotationInner, setRotationInner] = useState(0);
+  const [innerFrontDistance, setInnerFrontDistance] = useState(0);
+  const [innerBackDistance, setInnerBackDistance] = useState(0);
 
   const [outerDAT, setOuterDAT] = useState("");
   const [outerName, setOuterName] = useState("clarky.dat");
@@ -18,6 +20,8 @@ function HotwireWing3D() {
   const [rotationOuter, setRotationOuter] = useState(0);
   const [outerVerticalOffset, setOuterVerticalOffset] = useState(0);
   const [outerChordOffset, setOuterChordOffset] = useState(0);
+  const [outerFrontDistance, setOuterFrontDistance] = useState(0);
+  const [outerBackDistance, setOuterBackDistance] = useState(0);
 
   const [finalProfiles, setFinalProfiles] = useState({ inner: [], outer: [] });
 
@@ -78,7 +82,6 @@ function HotwireWing3D() {
   const cameraTargetRef = useRef({ x: 0, y: 0, z: 0 });
   const tooltipRef = useRef(null);
   const markerRef = useRef(null);  // der Marker für den aktuell gewählten Punkt
-  const sideCanvasRef = useRef(null);
 
   const [cameraPos, setCameraPos] = useState({x:0,y:0,z:0});
   const [cameraTarget, setCameraTarget] = useState({x:0,y:0,z:0});
@@ -333,7 +336,7 @@ lines.forEach(line => {
       if (markerRef.current) {
         markerRef.current.position.copy(closestPoint);
         // Farbe abhängig vom Tag
-        if (closestTag === window.PointTag.START || closestTag === window.PointTag.END || closestTag === window.PointTag.AILERON || closestTag === window.PointTag.HOLE || closestTag === window.PointTag.HOLE_END || closestTag === window.PointTag.FRONT_TRIM) {
+        if (closestTag === window.PointTag.START || closestTag === window.PointTag.END || closestTag === window.PointTag.AILERON || closestTag === window.PointTag.HOLE || closestTag === window.PointTag.HOLE_END || closestTag === window.PointTag.FRONT_TRIM || closestTag === window.PointTag.BACK_TRIM) {
           markerRef.current.material.color.set(0x00ff00); // grün
         } else {
           markerRef.current.material.color.set(0x000000); // schwarz
@@ -394,11 +397,12 @@ lines.forEach(line => {
 
     let innerTrimmed = innerWithHoles;
     let outerTrimmed = outerWithHoles;
+
     if (trimEnabled) {
-      innerTrimmed = window.trimAirfoilFront(innerTrimmed, trimLEmm);
-      outerTrimmed = window.trimAirfoilFront(outerTrimmed, trimLEmm);
-      innerTrimmed = window.trimAirfoilBack(innerTrimmed, trimTEmm);
-      outerTrimmed = window.trimAirfoilBack(outerTrimmed, trimTEmm);
+      innerTrimmed = window.trimAirfoilFront(innerTrimmed, trimLEmm, setInnerFrontDistance);
+      outerTrimmed = window.trimAirfoilFront(outerTrimmed, trimLEmm, setOuterFrontDistance);
+      innerTrimmed = window.trimAirfoilBack(innerTrimmed, trimTEmm, setInnerBackDistance);
+      outerTrimmed = window.trimAirfoilBack(outerTrimmed, trimTEmm, setOuterBackDistance);
     }
     
     //setDebugPoints({ inner: innerTrimmed.map(p => ({x: p.x, y: p.y, tag: p.tag || null })), outer: outerTrimmed.map(p => ({x: p.x, y: p.y, tag: p.tag || null}))});
@@ -945,6 +949,10 @@ useEffect(() => {
           gcodeOpen={gcodeOpen} setGcodeOpen={setGcodeOpen} gcode={gcode}                        // <--- GCode jetzt über State
           debugOpen={debugOpen} setDebugOpen={setDebugOpen} debugPoints={debugPoints}
           langVersion={langVersion} setLangVersion={setLangVersion}
+          innerFrontDistance={innerFrontDistance} setInnerFrontDistance={setInnerFrontDistance}
+          outerFrontDistance={outerFrontDistance} setOuterFrontDistance={setOuterFrontDistance}
+          innerBackDistance={innerBackDistance} setInnerBackDistance={setInnerBackDistance}
+          outerBackDistance={outerBackDistance} setOuterBackDistance={setOuterBackDistance}
             // === Maschinendaten Props ===
           isActive={machineActive} onToggle={() => setMachineActive(!machineActive)}
           xName={xName} setXName={setXName}
