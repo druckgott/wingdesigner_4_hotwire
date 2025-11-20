@@ -64,5 +64,21 @@
   
   <!-- Haupt-App -->
   <script type="text/babel" src="js/main.jsx"></script>
+
+  <footer id="version-footer" style="position:fixed; bottom:6px; right:8px; font-size:12px; color:#666;">
+    Version: loading…
+  </footer>
+  <script>
+  fetch("commit.txt")
+    .then(r => r.text())
+    .then(hash => {
+      document.getElementById("version-footer").textContent =
+        "Version: " + hash.trim().substring(0, 7); // nur Kurz-Hash anzeigen
+    })
+    .catch(err => {
+      document.getElementById("version-footer").textContent =
+        "Version: unavailable";
+    });
+  </script>
 </body>
 </html>
