@@ -312,31 +312,7 @@ window.addBottomPath = function(profilePts, xPercent = 0.5, gap = 2, forwardAngl
   ];
 };
 
-
-/*window.trimAirfoilFront = function(points, trimLEmm) {
-  if (!points || points.length < 2 || trimLEmm <= 0) return points;
-  const xMin = Math.min(...points.map(p => p.x));
-  const xLimit = xMin + trimLEmm;
-  let topPoint = null, bottomPoint = null, topIndex = null, bottomIndex = null;
-  for (let i = points.length - 1; i >= 0; i--) {
-    if (points[i].x <= xLimit) {
-      topPoint = { ...points[i], x: xLimit };
-      topIndex = i;
-      break;
-    }
-  }
-  for (let i = 0; i < points.length; i++) {
-    if (points[i].x <= xLimit) {
-      bottomPoint = { ...points[i], x: xLimit };
-      bottomIndex = i;
-      break;
-    }
-  }
-  if (!topPoint || !bottomPoint) return points;
-  return [...points.slice(0, bottomIndex), bottomPoint, topPoint, ...points.slice(topIndex + 1)];
-};*/
-
-window.trimAirfoilFront = function(points, trimLEmm) {
+window.trimAirfoilFront = function(points, trimLEmm, setMiddleDistance) {
   if (!points || points.length < 2 || trimLEmm <= 0) return points;
 
   const xMin = Math.min(...points.map(p => p.x));
@@ -376,48 +352,23 @@ window.trimAirfoilFront = function(points, trimLEmm) {
     middle[middle.length - 1].tag = window.PointTag.FRONT_TRIM;
   }
 
+  let middleDistance = 0;
+  if (middle.length >= 2) {
+    const dx = middle[middle.length - 1].x - middle[0].x;
+    const dy = middle[middle.length - 1].y - middle[0].y;
+    middleDistance = Math.sqrt(dx * dx + dy * dy);
+  }
+
+  // State direkt setzen, falls Setter übergeben wurde
+  if (setMiddleDistance) setMiddleDistance(middleDistance);
+
   // Punkte rechts vom Trim-Bereich bleiben unverändert
   const right = points.slice(topIndex + 1);
 
   return [...left, ...middle, ...right];
 };
 
-
-/*window.trimAirfoilBack = function(points, trimTEmm) {
-  if (!points || points.length < 2 || trimTEmm <= 0) return points;
-  const xMax = Math.max(...points.map(p => p.x));
-  const xLimit = xMax - trimTEmm;
-  const interpY = (p1, p2, x) => {
-    if (!p1 || !p2 || p1.x === p2.x) return p1 ? p1.y : 0;
-    return p1.y + (p2.y - p1.y) * (x - p1.x) / (p2.x - p1.x);
-  };
-  const upper = [];
-  let upperDone = false;
-  for (let i = 0; i < points.length; i++) {
-    const p = points[i];
-    if (p.x <= xLimit) upper.push({ ...p });
-    if (!upperDone && p.y > 0 && points[i+1]?.x <= xLimit) {
-      const yProfile = interpY(points[i+1], p, xLimit);
-      upper.push({ x: xLimit, y: points[0].y, tag: "START_POINT" });
-      upper.push({ x: xLimit, y: yProfile });
-      upperDone = true;
-    }
-  }
-  const lower = [];
-  let lowerDone = false;
-  for (let i = points.length - 1; i >= 0; i--) {
-    const p = points[i];
-    if (!lowerDone && p.y < 0 && points[i-1]?.x <= xLimit) {
-      const yProfile = interpY(p, points[i-1], xLimit);
-      lower.push({ x: xLimit, y: yProfile });
-      lower.push({ x: xLimit, y: points[0].y, tag: "END_POINT" });
-      lowerDone = true;
-    }
-  }
-  return [...upper, ...lower];
-};*/
-
-window.trimAirfoilBack = function(points, trimTEmm) {
+window.trimAirfoilBack = function(points, trimTEmm, setMiddleDistance) {
   if (!points || points.length < 2 || trimTEmm <= 0) return points;
 
   const xMax = Math.max(...points.map(p => p.x));
@@ -425,21 +376,65 @@ window.trimAirfoilBack = function(points, trimTEmm) {
 
   // Alle Punkte projizieren und gleichzeitig die projizierten Punkte sammeln
   const projected = [];
-  const trimPoints = [];
+  const trimmedIndices = [];
   
-  points.forEach(p => {
+  /*points.forEach(p => {
     const newP = { ...p, x: p.x > xLimit ? xLimit : p.x };
     projected.push(newP);
-    if (newP.x === xLimit) trimPoints.push(newP);
+    //if (newP.x === xLimit) trimPoints.push(newP);
+    if (p.x > xLimit) {
+      if (firstTrimIndex === null) firstTrimIndex = i; // ersten trim merken
+      lastTrimIndex = i; // immer den letzten trim merken
+    }
+  });*/
+  points.forEach((p, i) => {
+    const newP = { ...p, x: p.x > xLimit ? xLimit : p.x };
+    projected.push(newP);
+
+    // Punkt wird getrimmt
+    if (p.x > xLimit) {
+      trimmedIndices.push(i);
+    }
   });
 
   // Tag für erste und letzte projizierte Punkte
-  //if (trimPoints.length > 0) {
-  //  trimPoints[0].tag = window.PointTag.BACK_TRIM;
-  //  trimPoints[trimPoints.length - 1].tag = window.PointTag.BACK_TRIM;
-  //}
+  if (trimmedIndices.length >= 2) {
+    let splitIndex = null;
 
-  return projected;
+    // Sprung >1 suchen
+    for (let j = 1; j < trimmedIndices.length; j++) {
+      if (trimmedIndices[j] - trimmedIndices[j - 1] > 1) {
+        splitIndex = j;
+        break;
+      }
+    }
+
+    let firstTagIndex, lastTagIndex;
+
+    if (splitIndex !== null) {
+        // Sprung gefunden → zwei Blöcke
+        firstTagIndex = trimmedIndices[splitIndex - 1];  // letzter Punkt erster Block
+        lastTagIndex = trimmedIndices[splitIndex];       // erster Punkt zweiter Block
+      } else {
+        // Nur ein Block → erste und letzte Position
+        firstTagIndex = trimmedIndices[0];
+        lastTagIndex = trimmedIndices[trimmedIndices.length - 1];
+      }
+
+      // Tags setzen
+      projected[firstTagIndex].tag = window.PointTag.BACK_TRIM;
+      projected[lastTagIndex].tag = window.PointTag.BACK_TRIM;
+
+      // Berechnung der mittleren Distanz
+      const dx = projected[lastTagIndex].x - projected[firstTagIndex].x;
+      const dy = projected[lastTagIndex].y - projected[firstTagIndex].y;
+      const middleDistance = Math.sqrt(dx * dx + dy * dy);
+
+      if (setMiddleDistance) setMiddleDistance(middleDistance);
+      
+    }
+
+ return projected;
 };
 
 // Funktion: Punkte gleichmäßig entlang der Kurve verteilen (Objekte {x, y})

@@ -95,7 +95,11 @@ window.langDE = {
   trimSection: "Trim-Profil",
   trimEnabled: "Trim aktivieren",
   trimLE: "Nasenleiste (LE)",
+  leadingEdgeHeightInner: "LE Höhe innen",
+  leadingEdgeHeightOuter: "LE Höhe außen",
   trimTE: "Endleiste (TE)",
+  trailingEdgeHeightInner: "TE Höhe innen",
+  trailingEdgeHeightOuter: "TE Höhe außen",
 
   //Gcode
   gcodeSection: "GCode",

@@ -128,6 +128,14 @@ window.LeftPanel = function LeftPanel(props) {
   var tailLengthSimu = props.tailLengthSimu;
   var setTailLengthSimu = props.setTailLengthSimu;
   var trailLengthMax = props.trailLengthMax;
+  var innerFrontDistance = props.innerFrontDistance;
+  var setInnerFrontDistance = props.setInnerFrontDistance;
+  var outerFrontDistance = props.outerFrontDistance;
+  var setOuterFrontDistance = props.setOuterFrontDistance;
+  var innerBackDistance = props.innerBackDistance;
+  var setInnerBackDistance = props.setInnerBackDistance;
+  var outerBackDistance = props.outerBackDistance;
+  var setOuterBackDistance = props.setOuterBackDistance;
 
   return (
     <div style={{ flex: '0 0 500px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -258,6 +266,10 @@ window.LeftPanel = function LeftPanel(props) {
         trimEnabled={trimEnabled} setTrimEnabled={setTrimEnabled}
         trimLEmm={trimLEmm} setTrimLEmm={setTrimLEmm}
         trimTEmm={trimTEmm} setTrimTEmm={setTrimTEmm}
+        innerFrontDistance={innerFrontDistance} setInnerFrontDistance={setInnerFrontDistance}
+        outerFrontDistance={outerFrontDistance} setOuterFrontDistance={setOuterFrontDistance}
+        innerBackDistance={innerBackDistance} setInnerBackDistance={setInnerBackDistance}
+        outerBackDistance={outerBackDistance} setOuterBackDistance={setOuterBackDistance}
         isActive={activeTab === 'trim'} onToggle={function() { 
           setActiveTab(activeTab === 'trim' ? null : 'trim');
         }}
