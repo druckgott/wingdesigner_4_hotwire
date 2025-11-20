@@ -1,0 +1,24 @@
+name: Write Commit Hash
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  write-hash:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Write commit hash to file
+        run: |
+          echo "${{ github.sha }}" > commit.txt
+
+      - name: Commit and push changes
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add commit.txt
+          git commit -m "Update commit hash to ${{ github.sha }}" || echo "No changes to commit"
+          git push
