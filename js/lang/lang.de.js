@@ -51,6 +51,7 @@ window.langDE = {
   height_foam: "Y/A Height",
   length_foam: "X/Z Länge",
   showFoam: "Schaum anzeigen",
+  offset_foam: "Offset",
 
   // --- GCode & Simulation & Sonstiges ---
   gcode: "Generierter GCode",

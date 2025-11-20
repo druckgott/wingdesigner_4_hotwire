@@ -1104,12 +1104,12 @@ window.projectPointsWithOffset = function(points, offset) {
     return points.map(p => window.projectPointWithOffset(p, offset));
 };
 
-window.projectProfiles = function(innerFinal, outerFinal, currentSpan, newSpan) {
+window.projectProfiles = function(innerFinal, outerFinal, currentSpan, newSpan, offset_foam = 0) {
     if (innerFinal.length !== outerFinal.length) {
         throw new Error("Profilpunktlisten müssen gleich lang sein!");
     }
 
-    const offset = (newSpan - currentSpan) / 2;
+    const projection_offset = ((newSpan - currentSpan) / 2 );
 
     const innerProj = [];
     const outerProj = [];
@@ -1131,16 +1131,16 @@ window.projectProfiles = function(innerFinal, outerFinal, currentSpan, newSpan) 
         const uz = dz / len;
 
         innerProj.push({
-            x: inner3D.x - ux * offset,
-            y: inner3D.y - uy * offset,
-            z: inner3D.z - uz * offset,
+            x: inner3D.x - ux * (projection_offset + offset_foam),
+            y: inner3D.y - uy * (projection_offset + offset_foam),
+            z: inner3D.z - uz * (projection_offset + offset_foam),
             ...(inner.tag !== undefined && { tag: inner.tag })
         });
 
         outerProj.push({
-            x: outer3D.x + ux * offset,
-            y: outer3D.y + uy * offset,
-            z: outer3D.z + uz * offset,
+            x: outer3D.x + ux * (projection_offset - offset_foam),
+            y: outer3D.y + uy * (projection_offset - offset_foam),
+            z: outer3D.z + uz * (projection_offset - offset_foam),
             ...(outer.tag !== undefined && { tag: outer.tag })
         });
     }

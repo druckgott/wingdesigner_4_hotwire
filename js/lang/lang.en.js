@@ -44,6 +44,7 @@ window.langEN = {
   width_foam: "Width",
   height_foam: "Y/A Height",
   length_foam: "X/Z Depth",
+  offset_foam: "offset",
 
   gcode: "Generated GCode",
 

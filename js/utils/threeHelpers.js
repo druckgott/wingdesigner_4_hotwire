@@ -44,7 +44,7 @@ window.removeLine = function(scene, lineName) {
     scene.remove(line);
     if (line.geometry) line.geometry.dispose();
     if (line.material) line.material.dispose();
-    scene.lines[lineName] = null;
+    delete scene.lines[lineName];
   }
 };
 
