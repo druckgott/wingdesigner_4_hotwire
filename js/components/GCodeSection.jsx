@@ -60,11 +60,15 @@ window.GCodeSection = function GCodeSection(props) {
   };
 
   return <ProfileBox title={title} color="#000" isActive={isOpen} onToggle={onToggle} key={uniqueKey}>
-    <button onClick={saveFile}>{t('save')}</button>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <button onClick={saveFile}>{t('save')}</button>
+    </div>
 
     {(activeTab === 'foam' || activeTab === 'machine') && (
       <div>
-        <button onClick={toggleRunning}>{running ? t('stop') || "Stop" : t('start') || "Start"}</button>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <button onClick={toggleRunning}>{running ? t('stop') || "Stop" : t('start') || "Start"}</button>
+        </div>
         <div className="profile-content">
           <label>{t('speedMultiplier')} (-) {speedMultiplier.toFixed(2)}x</label>
           <input type="range" min="0.01" max="5" step="0.01" value={speedMultiplier} onChange={(e) => setSpeedMultiplier(parseFloat(e.target.value))} />

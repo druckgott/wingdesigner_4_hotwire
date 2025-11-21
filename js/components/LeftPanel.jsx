@@ -101,6 +101,8 @@ window.LeftPanel = function LeftPanel(props) {
   var setFoamOffset = props.setFoamOffset;
   var surfaceVisible = props.surfaceVisible;
   var setSurfaceVisible = props.setSurfaceVisible;
+  var gridVisible = props.gridVisible;
+  var setGridVisible = props.setGridVisible;
   var hotwirePoint = props.hotwirePoint;
   var setHotwirePoint = props.setHotwirePoint;
   var mirrorWing = props.mirrorWing;
@@ -173,6 +175,11 @@ window.LeftPanel = function LeftPanel(props) {
       <label>
         <input type="checkbox" checked={surfaceVisible} onChange={function(e) { setSurfaceVisible(e.target.checked); }} />
         {t('showSurface')}
+      </label>
+
+      <label>
+        <input type="checkbox" checked={gridVisible} onChange={function(e) { setGridVisible(e.target.checked); }} />
+        {t('showGrid')}
       </label>
 
       <label>

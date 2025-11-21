@@ -1,21 +1,27 @@
 // js/lang/lang.en.js
 window.langEN = {
+  // --- General ---
   language: "Language",
   camera: "Camera",
   target: "Target",
 
+  // --- Files ---
   innerDAT: "Root DAT",
   outerDAT: "Tip DAT",
 
+  // --- Basic Parameters ---
   span: "Wingspan",
   pointsPerProfile: "Points per profile",
   showSurface: "Show surface",
+  showGrid: "Show grid",
 
+  // --- Hotwire & Mirroring ---
   wireEntryExit: "Generate hotwire entry/exit point",
   mirrorWing: "Mirror wing",
   mirrorGapText: "Gap front, mirror surfaces (if active), bottom (mm)",
   machineEntryExit: "Machine entry/exit",
 
+  // --- Profiles ---
   innerProfile: "Root Airfoil",
   outerProfile: "Tip Profile",
   color: "Color",
@@ -26,6 +32,7 @@ window.langEN = {
   vertical: "Dihedral",
   chord: "LE Sweep",
 
+  // --- Machine Data ---
   machineData: "Machine data",
   left: "left",
   right: "right",
@@ -39,19 +46,27 @@ window.langEN = {
   wireDiameter: "Wire diameter",
   kerfSide: "Kerf side",
 
+  // --- Foam Block ---
   foamBlock: "Foam block",
-  showFoam: "Show foam",
   width_foam: "Width",
   height_foam: "Y/A Height",
   length_foam: "X/Z Depth",
-  offset_foam: "offset",
+  showFoam: "Show foam",
+  offset_foam: "Offset",
 
+  // --- GCode & Simulation ---
   gcode: "Generated GCode",
+  start: "Simulation Start",
+  stop: "Simulation Stop",
+  speedMultiplier: "Speed Multiplier Simulation",
+  save: "Save",
 
+  // --- Fallback for Select options ---
   none: "None",
   inner: "Inner",
   outer: "Outer",
 
+  // --- Export / Import ---
   exportImport: "Export / Import",
   exportAll: "Export full project",
   exportMachineFoam: "Export machine + foam",
@@ -60,6 +75,7 @@ window.langEN = {
   importSuccess: "Import successful!",
   importError: "Invalid JSON file",
 
+  // --- Holes ---
   holesSection: "Holes",
   diameter: "Diameter",
   pointsCount: "Points",
@@ -67,15 +83,16 @@ window.langEN = {
   vertical: "Vertical",
   delete: "Delete",
   addHole: "Add hole",
-  
+
+  // --- Ailerons ---
   aileronsSection: "Aileron Cut",
   thicknessTop: "Top thickness",
   positionFromRear: "Position from rear",
   frontAngle: "Front V-angle",
   rearAngle: "Rear V-angle",
-  delete: "Delete",
   addAileron: "Add aileron",
 
+  // --- Trim Airfoil ---
   trimSection: "Trim Airfoil",
   trimEnabled: "Enable Trim",
   trimLE: "Leading Edge (LE)",
@@ -83,12 +100,5 @@ window.langEN = {
   leadingEdgeHeightOuter: "LE Height Outer",
   trimTE: "Trailing Edge (TE)",
   trailingEdgeHeightInner: "TE Height Inner",
-  trailingEdgeHeightOuter: "TE Height Outer",
-
-  gcodeSection: "GCode",
-  start: "Simulation Start",
-  stop: "Simulation Stop",
-  speedMultiplier: "Speed Multiplier Simulation",
-  save: "Save"
-  
+  trailingEdgeHeightOuter: "TE Height Outer"
 };

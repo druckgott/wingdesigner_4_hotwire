@@ -28,6 +28,7 @@ function HotwireWing3D() {
   const [span, setSpan] = useState(500);
   const [profilePointsCount, setProfilePointsCount] = useState(300);
   const [surfaceVisible, setSurfaceVisible] = useState(true);
+  const [gridVisible, setGridVisible] = useState(true);
   const [holes, setHoles] = useState([{ diameter: 5, xPercent: 0.5, yPercent: 0.5, nPoints: 30 }]);
   const [ailerons, setAilerons] = useState([{ thicknessTop: 2, xPercent: 0.7, frontAngleDeg: 15, rearAngleDeg: 15 }]);
   const [trimEnabled, setTrimEnabled] = useState(false);
@@ -494,8 +495,6 @@ lines.forEach(line => {
       scene.add(innerProjectedMaschineLine);
       scene.add(outerProjectedMaschineLine);
     }
-
-    window.addCenterMMGrid(scene, innerFinal, outerFinal, 10, 1);
     
     setDebugPoints({ inner: innerFinal.map(p => ({x: p.x, y: p.y, tag: p.tag || null })), outer: outerFinal.map(p => ({x: p.x, y: p.y, tag: p.tag || null}))});
     
@@ -603,6 +602,7 @@ lines.forEach(line => {
   hotwireLength,
   activeTab,
   surfaceVisible,
+  gridVisible,
   hotwirePoint,
   mirrorWing,
   mirrorGap,
@@ -629,6 +629,28 @@ useEffect(() => {
     window.hotwireSim.speedMultiplier = speedMultiplier;
   }
 }, [speedMultiplier]); // Nur dieser Effekt reagiert auf Slider!
+
+//Grid Aktivieren/Deaktivieren
+useEffect(() => {
+  const scene = sceneRef.current;
+  if (!scene || !finalProfiles) return;
+
+  // Entferne altes Grid
+  if (scene.gridMM) {
+    scene.gridMM.traverse(obj => {
+      if (obj.geometry) obj.geometry.dispose();
+      if (obj.material) obj.material.dispose();
+      if (obj.type === 'Sprite') obj.material.map.dispose();
+    });
+    scene.remove(scene.gridMM);
+    scene.gridMM = null;
+  }
+
+  // Neues Grid nur erzeugen, wenn sichtbar
+  if (gridVisible && finalProfiles.inner.length > 0 && finalProfiles.outer.length > 0) {
+    window.addCenterMMGrid(scene, finalProfiles.inner, finalProfiles.outer, 10, 1);
+  }
+}, [gridVisible, finalProfiles]);
 
 //Surface Aktivieren/Deaktivieren
 useEffect(() => {
@@ -973,6 +995,8 @@ useEffect(() => {
           foamOffset={foamOffset} setFoamOffset={setFoamOffset}
           // === Surface Props ===
           surfaceVisible={surfaceVisible} setSurfaceVisible={setSurfaceVisible}
+          // === Grid Props ===
+          gridVisible={gridVisible} setGridVisible={setGridVisible}
           //spiegeln und Ausfahrpunkte
           hotwirePoint={hotwirePoint} setHotwirePoint={setHotwirePoint}
           mirrorWing={mirrorWing} setMirrorWing={setMirrorWing}
