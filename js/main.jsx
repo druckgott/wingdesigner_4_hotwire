@@ -542,6 +542,8 @@ lines.forEach(line => {
       window.generateG93Footer(axisNames)
     ].join('\n');
 
+    setGcode(generatedGcode);
+    
     if (activeTab === 'foam' || activeTab === 'machine') {
       //G-Code analysieren und ebenfalls darstellen
       const { gcodeInnerPoints, gcodeOuterPoints } = window.parseAndExtractGcodePoints(generatedGcode, hotwireLength);
@@ -571,7 +573,7 @@ lines.forEach(line => {
       };
   }
 
-    setGcode(generatedGcode);
+    
 
   }, [
   innerDAT,
