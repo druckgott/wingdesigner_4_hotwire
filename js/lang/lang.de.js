@@ -87,6 +87,7 @@ window.langDE = {
   triangle: "Dreieck",
   hexagon: "Hexagon",
   hole_rotation: "Loch rotieren",
+  hole_shape: "Lochtyp",
   addHole: "Loch hinzufügen",
 
   // --- Klappen ---

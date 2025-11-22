@@ -87,6 +87,7 @@ window.langEN = {
   triangle: "Dreieck",
   hexagon: "Hexagon",
   hole_rotation: "Loch rotieren",
+  hole_shape: "Lochtyp",
   addHole: "Add hole",
 
   // --- Ailerons ---
