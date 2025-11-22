@@ -29,7 +29,18 @@ function HotwireWing3D() {
   const [profilePointsCount, setProfilePointsCount] = useState(300);
   const [surfaceVisible, setSurfaceVisible] = useState(true);
   const [gridVisible, setGridVisible] = useState(true);
-  const [holes, setHoles] = useState([{ diameter: 5, xPercent: 0.5, yPercent: 0.5, nPoints: 30 }]);
+  
+  const [holes, setHoles] = useState([{ 
+        diameter: 5, 
+        xPercent: 0.5, 
+        yPercent: 0.5, 
+        nPoints: 30, 
+        innerBackDistance: 0,
+        outerBackDistance: 0,
+        HoleShapeFlag: 0,   // 0=Round,1=Rect,2=Triangle,3=Hex
+        HoleRotation: 0,    // Winkel 0-360°
+        }]);
+
   const [ailerons, setAilerons] = useState([{ thicknessTop: 2, xPercent: 0.7, frontAngleDeg: 15, rearAngleDeg: 15 }]);
   const [trimEnabled, setTrimEnabled] = useState(false);
   const [trimLEmm, setTrimLEmm] = useState(0);
@@ -391,9 +402,9 @@ lines.forEach(line => {
 
    holes.forEach(h => {
       const holeInner = window.getHolePoints(h.diameter, h.xPercent, h.yPercent, innerWithHoles, h.nPoints);
-      innerWithHoles = window.insertHoleWithInOut(innerWithHoles, holeInner, 3);
+      innerWithHoles = window.insertHoleWithInOut(innerWithHoles, holeInner, 3, h.HoleShapeFlag, h.HoleRotation);
       const holeOuter = window.getHolePoints(h.diameter, h.xPercent, h.yPercent, outerWithHoles, h.nPoints);
-      outerWithHoles = window.insertHoleWithInOut(outerWithHoles, holeOuter, 3);
+      outerWithHoles = window.insertHoleWithInOut(outerWithHoles, holeOuter, 3, h.HoleShapeFlag, h.HoleRotation);
     });
 
     let innerTrimmed = innerWithHoles;

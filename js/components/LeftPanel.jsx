@@ -294,7 +294,9 @@ window.LeftPanel = function LeftPanel(props) {
         </label>
       </ProfileBox>
 
-      <HolesSection holes={holes} setHoles={setHoles} isActive={activeTab === 'holes'} onToggle={function() { 
+      <HolesSection 
+        holes={holes} setHoles={setHoles} 
+        isActive={activeTab === 'holes'} onToggle={function() { 
         setActiveTab(activeTab === 'holes' ? null : 'holes');
       }} />
 

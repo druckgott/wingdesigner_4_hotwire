@@ -73,6 +73,29 @@ window.HolesSection = function HolesSection(props) {
               setHoles(newHoles);
             }} />
           </label>
+          {/* Neu: HoleShapeFlag Dropdown */}
+          <label>{t('shape')}
+            <select value={h.HoleShapeFlag} onChange={e => {
+              const newHoles = [...holes];
+              newHoles[i].HoleShapeFlag = Number(e.target.value);
+              setHoles(newHoles);
+            }}>
+              <option value={0}>{t('round')}</option>
+              <option value={1}>{t('rectangle')}</option>
+              <option value={2}>{t('triangle')}</option>
+              <option value={3}>{t('hexagon')}</option>
+            </select>
+          </label>
+
+          {/* HoleRotation Slider */}
+          <label>{t('rotation')} (°)
+            <input type="range" min="0" max="360" step="1" value={h.HoleRotation} onChange={e => {
+              const newHoles = [...holes];
+              newHoles[i].HoleRotation = parseFloat(e.target.value);
+              setHoles(newHoles);
+            }} />
+          </label>
+
           <button onClick={() => setHoles(holes.filter((_, idx) => idx !== i))}>
             {t('delete')}
           </button>

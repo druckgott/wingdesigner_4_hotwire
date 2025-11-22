@@ -113,37 +113,114 @@ window.createCutPoints = function(profilePt, holePt, n = 3) {
   return points;
 };
 
-window.insertHoleWithInOut = function(profilePts, holePts, nCutPoints = 3) {
+window.insertHoleWithInOut = function(profilePts, holePts, nCutPoints = 3, shapeFlag = 0, shapeRotationDeg = 0) {
   if (!profilePts.length || !holePts.length) return profilePts;
 
-  const { closestProfileIdx: ipIdx, closestHoleIdx: ihIdx } = window.findClosestHolePoint(profilePts, holePts);
+  let transformedHolePts = holePts.map(p => ({ x: p.x, y: p.y }));
+  if (shapeFlag !== 0) {
+    transformedHolePts = projectToShape(transformedHolePts, shapeFlag, shapeRotationDeg);
+  }
+
+  const { closestProfileIdx: ipIdx, closestHoleIdx: ihIdx } = window.findClosestHolePoint(profilePts, transformedHolePts);
   const profilePt = profilePts[ipIdx];
-  const holePt = holePts[ihIdx];
 
-  const inOutProfilePtStart = { ...profilePt, tag: window.PointTag.HOLE_END };
-  const inOutProfilePtEnd = { ...profilePt, tag: window.PointTag.HOLE_END };
-  const inOutHolePt = { ...holePt, tag: window.PointTag.HOLE };
-
-  const rotatedHolePts = window.rotateHolePointsToStart(holePts, ihIdx, true)
+  const rotatedHolePts = window.rotateHolePointsToStart(transformedHolePts, ihIdx, true)
     .map(p => ({ x: p.x, y: p.y, tag: window.PointTag.HOLE }));
 
-  const cutPts = window.createCutPoints(profilePt, holePt, nCutPoints)
+  const inOutHolePt = { ...rotatedHolePts[0], tag: window.PointTag.HOLE };
+  const inOutProfilePtStart = { ...profilePt, tag: window.PointTag.HOLE_END };
+  const inOutProfilePtEnd = { ...profilePt, tag: window.PointTag.HOLE_END };
+
+  const cutPts = window.createCutPoints(profilePt, inOutHolePt, nCutPoints)
     .map(p => ({ x: p.x, y: p.y, tag: window.PointTag.HOLE }));
 
   const newProfile = [
-  ...profilePts.slice(0, ipIdx), // alle Punkte **bis zum Insert-Punkt**, ohne Tag
-  inOutProfilePtStart,                     // erster spezieller Punkt mit Tag
-  ...cutPts,                           // Cut-Punkte mit Tag
-  inOutHolePt,                         // Start-Hole-Punkt
-  ...rotatedHolePts.slice(1),          // alle weiteren Hole-Punkte außer dem ersten (doppeltes vermeiden)
-  inOutHolePt,                         // End-Hole-Punkt
-  ...cutPts.slice().reverse(),        // Cut-Punkte wieder zurück
-  inOutProfilePtEnd,                      // letzter spezieller Punkt mit Tag
-  ...profilePts.slice(ipIdx)       // Rest des Profils ab Insert-Punkt
-];
+    ...profilePts.slice(0, ipIdx), // alle Punkte **bis zum Insert-Punkt**, ohne Tag
+    inOutProfilePtStart,                     // erster spezieller Punkt mit Tag
+    ...cutPts,                           // Cut-Punkte mit Tag
+    inOutHolePt,                         // Start-Hole-Punkt
+    ...rotatedHolePts.slice(1),          // alle weiteren Hole-Punkte außer dem ersten (doppeltes vermeiden)
+    inOutHolePt,                         // End-Hole-Punkt
+    ...cutPts.slice().reverse(),        // Cut-Punkte wieder zurück
+    inOutProfilePtEnd,                      // letzter spezieller Punkt mit Tag
+    ...profilePts.slice(ipIdx)       // Rest des Profils ab Insert-Punkt
+  ];
 
   return newProfile;
 };
+
+// -------------------------------------------------------
+//   SHAPE-PROJEKTION
+// -------------------------------------------------------
+
+function projectToShape(holePts, flag, shapeRotationDeg = 0) {
+  const cx = holePts.reduce((s,p)=>s+p.x,0)/holePts.length;
+  const cy = holePts.reduce((s,p)=>s+p.y,0)/holePts.length;
+
+  const rs = holePts.map(p => Math.hypot(p.x - cx, p.y - cy));
+  const R = Math.max(...rs);
+
+  const rotationRad = shapeRotationDeg * Math.PI / 180;
+
+  return holePts.map(p => {
+    // Vektor vom Mittelpunkt
+    const dx = p.x - cx;
+    const dy = p.y - cy;
+
+    // Winkel + Rotation
+    let angle = Math.atan2(dy, dx) + rotationRad;
+
+    let target;
+    switch(flag) {
+      case 1: // Rechteck
+        target = projectAngleToRectangle(angle, R, rotationRad);
+        break;
+      case 2: // Dreieck
+        target = projectAngleToPolygon(angle, R, 3, rotationRad);
+        break;
+      case 3: // Sechseck
+        target = projectAngleToPolygon(angle, R, 6, rotationRad);
+        break;
+      default:
+        target = { x: dx, y: dy };
+    }
+
+    return { x: target.x + cx, y: target.y + cy, tag: window.PointTag.HOLE };
+  });
+}
+
+// Rechteckprojektion mit Rotation der Achse
+function projectAngleToRectangle(a, R, rotationRad = 0) {
+  // Transformiere den Winkel in das rotierte Rechteck-System
+  const rotatedAngle = a - rotationRad;
+
+  // Normale Rechteckprojektion auf ±R
+  let x, y;
+  const t = Math.tan(rotatedAngle);
+  if (Math.abs(t) <= 1) {
+    x = Math.sign(Math.cos(rotatedAngle)) * R;
+    y = x * t;
+  } else {
+    y = Math.sign(Math.sin(rotatedAngle)) * R;
+    x = y / t;
+  }
+
+  // Zurück in das Original-Koordinatensystem rotieren
+  const cosR = Math.cos(rotationRad);
+  const sinR = Math.sin(rotationRad);
+  const xr = x * cosR - y * sinR;
+  const yr = x * sinR + y * cosR;
+
+  return { x: xr, y: yr };
+}
+
+// Polygonprojektion mit Rotation der Achse
+function projectAngleToPolygon(angle, R, n, rotationRad = 0) {
+  const sector = (2*Math.PI)/n;
+  const k = Math.round((angle - rotationRad)/sector);
+  const targetAngle = k*sector + rotationRad;
+  return { x: R*Math.cos(targetAngle), y: R*Math.sin(targetAngle) };
+}
 
 window.smoothProfile = function(points, threshold = 2) {
   const smoothed = [{ ...points[0] }];
