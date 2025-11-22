@@ -82,6 +82,11 @@ window.langEN = {
   horizontal: "Horizontal",
   vertical: "Vertical",
   delete: "Delete",
+  round: "Kreis",
+  rectangle: "Rechteck",
+  triangle: "Dreieck",
+  hexagon: "Hexagon",
+  hole_rotation: "Loch rotieren",
   addHole: "Add hole",
 
   // --- Ailerons ---

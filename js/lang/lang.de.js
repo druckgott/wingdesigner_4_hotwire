@@ -82,6 +82,11 @@ window.langDE = {
   horizontal: "Horizontal",
   vertical: "Vertikal",
   delete: "Löschen",
+  round: "Kreis",
+  rectangle: "Rechteck",
+  triangle: "Dreieck",
+  hexagon: "Hexagon",
+  hole_rotation: "Loch rotieren",
   addHole: "Loch hinzufügen",
 
   // --- Klappen ---
