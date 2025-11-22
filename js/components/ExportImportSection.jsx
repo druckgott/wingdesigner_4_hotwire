@@ -9,6 +9,7 @@ window.ExportImportSection = function ExportImportSection(props) {
   };
 
   // Alle Props einzeln holen (wegen Babel!)
+  var version = props.version;
   var innerDAT = props.innerDAT;
   var setInnerDAT = props.setInnerDAT;
   var outerDAT = props.outerDAT;
@@ -100,30 +101,30 @@ window.ExportImportSection = function ExportImportSection(props) {
   // Export-Funktionen
   var exportAll = function() {
     var data = {
-      machine: { xName: xName, yName: yName, zName: zName, aName: aName, axisXmm: axisXmm, axisYmm: axisYmm, hotwireLength: hotwireLength, speed: speed, fMax: fMax, fMin: fMin, hotWirePower: hotWirePower, wireDiameter: wireDiameter, kerfSide: kerfSide },
-      wing: { innerName: innerName, innerColor: innerColor, innerScale: innerScale, thicknessScaleInner: thicknessScaleInner, rotationInner: rotationInner, outerName: outerName, outerColor: outerColor, outerScale: outerScale, thicknessScaleOuter: thicknessScaleOuter, rotationOuter: rotationOuter, outerVerticalOffset: outerVerticalOffset, outerChordOffset: outerChordOffset, span: span, trimEnabled: trimEnabled, trimLEmm: trimLEmm, trimTEmm: trimTEmm, holes: holes, ailerons: ailerons, mirrorWing: mirrorWing },
-      profil: { innerDAT: innerDAT, outerDAT: outerDAT },
-      foam: { foamLength: foamLength, foamWidth: foamWidth, foamHeight: foamHeight }
+      machine: { version: version, xName: xName, yName: yName, zName: zName, aName: aName, axisXmm: axisXmm, axisYmm: axisYmm, hotwireLength: hotwireLength, speed: speed, fMax: fMax, fMin: fMin, hotWirePower: hotWirePower, wireDiameter: wireDiameter, kerfSide: kerfSide },
+      wing: { version: version, innerName: innerName, innerColor: innerColor, innerScale: innerScale, thicknessScaleInner: thicknessScaleInner, rotationInner: rotationInner, outerName: outerName, outerColor: outerColor, outerScale: outerScale, thicknessScaleOuter: thicknessScaleOuter, rotationOuter: rotationOuter, outerVerticalOffset: outerVerticalOffset, outerChordOffset: outerChordOffset, span: span, trimEnabled: trimEnabled, trimLEmm: trimLEmm, trimTEmm: trimTEmm, holes: holes, ailerons: ailerons, mirrorWing: mirrorWing },
+      profil: { version: version, innerDAT: innerDAT, outerDAT: outerDAT },
+      foam: { version: version, foamLength: foamLength, foamWidth: foamWidth, foamHeight: foamHeight }
     };
     downloadJSON(data, 'wing_project.json');
   };
 
   var exportMachineFoam = function() {
     var data = {
-      machine: { xName: xName, yName: yName, zName: zName, aName: aName, axisXmm: axisXmm, axisYmm: axisYmm, hotwireLength: hotwireLength, speed: speed, fMax: fMax, fMin: fMin, hotWirePower: hotWirePower, wireDiameter: wireDiameter, kerfSide: kerfSide },
-      foam: { foamLength: foamLength, foamWidth: foamWidth, foamHeight: foamHeight }
+      machine: { version: version, xName: xName, yName: yName, zName: zName, aName: aName, axisXmm: axisXmm, axisYmm: axisYmm, hotwireLength: hotwireLength, speed: speed, fMax: fMax, fMin: fMin, hotWirePower: hotWirePower, wireDiameter: wireDiameter, kerfSide: kerfSide },
+      foam: { version: version, foamLength: foamLength, foamWidth: foamWidth, foamHeight: foamHeight }
     };
     downloadJSON(data, 'machine_foam.json');
   };
 
   var exportProfile = function() {
     var data = {
-      wing: { innerName: innerName, innerColor: innerColor, innerScale: innerScale, thicknessScaleInner: thicknessScaleInner, rotationInner: rotationInner,
+      wing: { version: version, innerName: innerName, innerColor: innerColor, innerScale: innerScale, thicknessScaleInner: thicknessScaleInner, rotationInner: rotationInner,
               outerName: outerName, outerColor: outerColor, outerScale: outerScale, thicknessScaleOuter: thicknessScaleOuter, rotationOuter: rotationOuter,
               outerVerticalOffset: outerVerticalOffset, outerChordOffset: outerChordOffset,
               span: span, trimEnabled: trimEnabled, trimLEmm: trimLEmm, trimTEmm: trimTEmm,
               holes: holes, ailerons: ailerons, mirrorWing: mirrorWing },
-      profil: { innerDAT: innerDAT, outerDAT: outerDAT }
+      profil: { version: version, innerDAT: innerDAT, outerDAT: outerDAT }
     };
     downloadJSON(data, 'profile_data.json');
   };

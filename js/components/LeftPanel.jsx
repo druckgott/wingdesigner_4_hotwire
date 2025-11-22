@@ -53,6 +53,7 @@ window.LeftPanel = function LeftPanel(props) {
   };
 
   // Alle Props – exakt wie bei dir!
+  var version = props.version;
   var cameraPosRef = props.cameraPosRef;
   var cameraTargetRef = props.cameraTargetRef;
   var innerDAT = props.innerDAT;
@@ -381,6 +382,7 @@ window.LeftPanel = function LeftPanel(props) {
       />
 
       <ExportImportSection
+        version={version}
         innerDAT={innerDAT} setInnerDAT={setInnerDAT}
         outerDAT={outerDAT} setOuterDAT={setOuterDAT}
         xName={xName} setXName={setXName}

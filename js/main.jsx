@@ -1,6 +1,8 @@
 const { useState, useEffect, useRef } = React;
 
 function HotwireWing3D() {
+  const [version, setVersion] = useState("loading…");
+
   const [innerDAT, setInnerDAT] = useState("");
   const [innerName, setInnerName] = useState("clarky.dat");
   const [innerColor, setInnerColor] = useState("#ff0000");
@@ -104,6 +106,17 @@ function HotwireWing3D() {
   const [tailLengthSimu, setTailLengthSimu] = useState(50);
   const [trailLengthMax, setTrailLengthMax] = useState(50);
   
+  //Version Useffect
+  useEffect(() => {
+    fetch("commit.txt")
+      .then((r) => r.text())
+      .then((hash) => {
+        setVersion(hash.trim().substring(0, 7)); // Kurz-Hash
+      })
+      .catch((err) => {
+        setVersion("unavailable");
+      });
+  }, []);
 
   useEffect(() => {
     fetch('airfoil/clarky.dat')
@@ -514,6 +527,7 @@ lines.forEach(line => {
 
     const generatedGcode = [
       window.generateG93HeaderComments({
+        version: version,
         innerName: innerName,
         outerName: outerName,
         innerScale: innerScale,
@@ -960,6 +974,7 @@ useEffect(() => {
       <div style={{ display: 'flex', gap: 12, flex: 1, minHeight: 0 }}>
         {/* Left Canvas-Box */}
         <LeftPanel
+          version={version}
           cameraPosRef={cameraPosRef} cameraTargetRef={cameraTargetRef}
           innerDAT={innerDAT} setInnerDAT={setInnerDAT}
           outerDAT={outerDAT} setOuterDAT={setOuterDAT}
@@ -1032,6 +1047,10 @@ useEffect(() => {
         {/* Canvas-Box TooltiipRef */}
         <div ref={tooltipRef} style={{ position:'absolute', padding:'4px 6px', background:'#000', color:'#fff', borderRadius:4, pointerEvents:'none', display:'none', fontSize:12 }}></div>
       </div>
+      {/* Footer mit Version */}
+      <footer style={{ position: "fixed", bottom: 6, right: 8, fontSize: 12, color: "#666" }}>
+        Version: {version}
+      </footer>
     </div>
   );
 }
