@@ -19,6 +19,39 @@ window.LeftPanel = function LeftPanel(props) {
     return v.replace(/[^A-Za-z]/g, '').toUpperCase();
   };
 
+
+  window.syncInput = function (stateValue, setter, factor = 1, toFixed = null) {
+    const [display, setDisplay] = React.useState("");
+
+    // Beim ersten Rendern oder wenn sich der echte Wert ändert → Anzeige aktualisieren
+    React.useEffect(() => {
+      const realDisplay = toFixed !== null 
+        ? (stateValue * factor).toFixed(toFixed)
+        : String(stateValue * factor);
+      setDisplay(realDisplay);
+    }, [stateValue]);
+
+    return {
+      value: display,
+      onChange: (e) => {
+        const v = e.target.value;
+        setDisplay(v); // sofort anzeigen (auch "-" oder "-12.")
+
+        if (v === "" || v === "-" || v === "." || v === "-.") {
+          // Bei diesen Zwischenzuständen nur anzeigen, nichts setzen
+          return;
+        }
+
+        if (/^-?\d*\.?\d*$/.test(v)) {
+          const num = Number(v);
+          if (!isNaN(num)) {
+            setter(num / factor); // z. B. Grad → Radiant
+          }
+        }
+      }
+    };
+  };
+
   // Alle Props – exakt wie bei dir!
   var cameraPosRef = props.cameraPosRef;
   var cameraTargetRef = props.cameraTargetRef;
@@ -140,7 +173,7 @@ window.LeftPanel = function LeftPanel(props) {
   var setOuterBackDistance = props.setOuterBackDistance;
 
   return (
-    <div style={{ flex: '0 0 500px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div className="left-panel" style={{ flex: '0 0 500px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
 
       {/* SPRACHWAHL – OBEN! */}
       <label>
@@ -228,7 +261,7 @@ window.LeftPanel = function LeftPanel(props) {
           <input type="range" min="0.5" max="1.5" step="0.01" value={thicknessScaleInner} onChange={function(e) { setThicknessScaleInner(Number(e.target.value)); }} />
         </label>
         <label>{t('rotation')} (°)
-          <input type="number" step="0.01" min="-25" max="25" value={rotationInner * 180 / Math.PI} onChange={function(e) { setRotationInner(Number(e.target.value) * Math.PI / 180); }} />
+          <input type="number" step="0.01" min="-25" max="25" {...window.syncInput(rotationInner, setRotationInner, 180 / Math.PI, 2)}/>
           <input type="range" min="-25" max="25" value={rotationInner * 180 / Math.PI} onChange={function(e) { setRotationInner(Number(e.target.value) * Math.PI / 180); }} />
         </label>
       </ProfileBox>
@@ -248,7 +281,7 @@ window.LeftPanel = function LeftPanel(props) {
           <input type="range" min="0.5" max="1.5" step="0.01" value={thicknessScaleOuter} onChange={function(e) { setThicknessScaleOuter(Number(e.target.value)); }} />
         </label>
         <label>{t('rotation_outer')} (°)
-          <input type="number" step="0.01" min="-25" max="25" value={rotationOuter * 180 / Math.PI} onChange={function(e) { setRotationOuter(Number(e.target.value) * Math.PI / 180); }} />
+          <input type="number" step="0.01" min="-25" max="25" {...window.syncInput(rotationOuter, setRotationOuter, 180 / Math.PI, 2)}/>
           <input type="range" min="-25" max="25" value={rotationOuter * 180 / Math.PI} onChange={function(e) { setRotationOuter(Number(e.target.value) * Math.PI / 180); }} />
         </label>
         <label>{t('vertical')} (mm)
@@ -322,9 +355,12 @@ window.LeftPanel = function LeftPanel(props) {
             <label>{t('length_foam')} (mm): <input type="number" value={foamLength} onChange={function(e) { setFoamLength(Number(e.target.value)); }} /></label>
             <label>{t('width_foam')} (mm): <input type="number" value={foamWidth} onChange={function(e) { setFoamWidth(Number(e.target.value)); }} /></label>
             <label>{t('height_foam')} (mm): <input type="number" value={foamHeight} onChange={function(e) { setFoamHeight(Number(e.target.value)); }} /></label>
-            <label>{t('offset_foam')} (mm): <input type="number" value={foamOffset} onChange={function(e) { setFoamOffset(Number(e.target.value)); }} /></label>
-            <input type="range" min={(hotwireLength-foamWidth)/-2} max={(hotwireLength-foamWidth)/2} step="1" value={foamOffset} onChange={function(e) { setFoamOffset(Number(e.target.value)); }} />
-            <span >[Min: {(hotwireLength - foamWidth) / -2} | Max: {(hotwireLength - foamWidth) / 2}]</span>
+            <label>{t('offset_foam')} (mm): 
+              {/*<input type="number" value={foamOffset} onChange={function(e) { setFoamOffset(Number(e.target.value)); }} />*/}
+              <input type="range" min={(hotwireLength-foamWidth)/-2} max={(hotwireLength-foamWidth)/2} step="1" value={foamOffset} onChange={function(e) { setFoamOffset(Number(e.target.value)); }} />
+              <span >[Min: {(hotwireLength - foamWidth) / -2} | Max: {(hotwireLength - foamWidth) / 2}]</span>
+            </label>
+            
           </div>
         )}
       </div>
