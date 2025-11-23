@@ -174,79 +174,96 @@ window.LeftPanel = function LeftPanel(props) {
   var setOuterBackDistance = props.setOuterBackDistance;
 
   return (
-    <div className="left-panel" style={{ flex: '0 0 500px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div className="left-panel">
 
-      {/* SPRACHWAHL – OBEN! */}
-      <label>
-        {t('language')}:
-        <select value={currentLang} onChange={function(e) {
-          window.i18n.setLang(e.target.value);
-        }}>
-          <option value="de">Deutsch</option>
-          <option value="en">English</option>
-        </select>
-      </label>
-
-      <div style={{ fontSize: 12, background: '#f7f7f7', padding: 8, border: '1px solid #ccc' }}>
-        <b>{t('camera')}:</b> {cameraPosRef.current.x.toFixed(1)}, {cameraPosRef.current.y.toFixed(1)}, {cameraPosRef.current.z.toFixed(1)}<br/>
-        <b>{t('target')}:</b> {cameraTargetRef.current.x.toFixed(1)}, {cameraTargetRef.current.y.toFixed(1)}, {cameraTargetRef.current.z.toFixed(1)}
+      <div class="profile-box">
+        <div class="profile-header">{t('languageSelection')}</div>
+        <div class="profile-content">
+          {/* SPRACHWAHL – OBEN! */}
+          <label>
+            {t('language')}:
+            <select value={currentLang} onChange={function(e) {
+              window.i18n.setLang(e.target.value);
+            }}>
+              <option value="de">Deutsch</option>
+              <option value="en">English</option>
+            </select>
+          </label>
+        </div>
       </div>
 
-      <label>{t('innerDAT')} <input type="file" accept=".dat" onChange={function(e) { handleFile(e, setInnerDAT, setInnerName); }} /> {innerName}</label>
-      <label>{t('outerDAT')} <input type="file" accept=".dat" onChange={function(e) { handleFile(e, setOuterDAT, setOuterName); }} /> {outerName}</label>
+      <div class="profile-box">
+        <div class="profile-header">{t('wingParameters')}</div>
+        <div class="profile-content">
+          <label>{t('innerDAT')} 
+            <input type="file" accept=".dat" onChange={function(e) { handleFile(e, setInnerDAT, setInnerName); }} /> 
+            {innerName}
+            </label>
+          <label>{t('outerDAT')} 
+            <input type="file" accept=".dat" onChange={function(e) { handleFile(e, setOuterDAT, setOuterName); }} /> 
+            {outerName}
+            </label>
 
-      <label>{t('span')} (mm)
-        <input type="range" min="10" max="3000" value={span} onChange={function(e) { setSpan(Number(e.target.value)); }} />
-        <input type="number" value={span} onChange={function(e) { setSpan(Number(e.target.value)); }} />
-      </label>
+          <label>{t('span')} (mm)
+            <input type="range" min="10" max="3000" value={span} onChange={function(e) { setSpan(Number(e.target.value)); }} />
+            <input type="number" value={span} onChange={function(e) { setSpan(Number(e.target.value)); }} />
+          </label>
 
-      <label>
-        {t('pointsPerProfile')}
-        <input type="number" value={profilePointsCount} min="10" max="1000" onChange={function(e) { setProfilePointsCount(Number(e.target.value)); }} />
-        <input type="range" min="10" max="1000" step="1" value={profilePointsCount} onChange={function(e) { setProfilePointsCount(Number(e.target.value)); }} />
-      </label>
+          <label>
+            {t('pointsPerProfile')}
+            <input type="number" value={profilePointsCount} min="10" max="1000" onChange={function(e) { setProfilePointsCount(Number(e.target.value)); }} />
+            <input type="range" min="10" max="1000" step="1" value={profilePointsCount} onChange={function(e) { setProfilePointsCount(Number(e.target.value)); }} />
+          </label>
+        </div>
+      </div>
 
-      <label>
-        <input type="checkbox" checked={surfaceVisible} onChange={function(e) { setSurfaceVisible(e.target.checked); }} />
-        {t('showSurface')}
-      </label>
 
-      <label>
-        <input type="checkbox" checked={gridVisible} onChange={function(e) { setGridVisible(e.target.checked); }} />
-        {t('showGrid')}
-      </label>
+      <div class="profile-box">
+        <div class="profile-header">{t('hotwireOptions')}</div>
+        <div class="profile-content">
+          <label>
+            <input type="checkbox" checked={surfaceVisible} onChange={function(e) { setSurfaceVisible(e.target.checked); }} />
+            {t('showSurface')}
+          </label>
 
-      <label>
-        <input type="checkbox" checked={hotwirePoint} onChange={function(e) { 
-          var val = e.target.checked; 
-          setHotwirePoint(val); 
-          if (!val) { 
-            setMirrorWing(false); 
-            setMachineEntryExit(false); 
-          } 
-        }} />
-        {t('wireEntryExit')}
-      </label>
+          <label>
+            <input type="checkbox" checked={gridVisible} onChange={function(e) { setGridVisible(e.target.checked); }} />
+            {t('showGrid')}
+          </label>
 
-      <label style={{ opacity: hotwirePoint ? 1 : 0.5 }}>
-        <input type="checkbox" checked={mirrorWing} onChange={function(e) { 
-          if (hotwirePoint) setMirrorWing(e.target.checked); 
-        }} disabled={!hotwirePoint} />
-        {t('mirrorWing')}
-      </label>
+          <label>
+            <input type="checkbox" checked={hotwirePoint} onChange={function(e) { 
+              var val = e.target.checked; 
+              setHotwirePoint(val); 
+              if (!val) { 
+                setMirrorWing(false); 
+                setMachineEntryExit(false); 
+              } 
+            }} />
+            {t('wireEntryExit')}
+          </label>
 
-      <label style={{ opacity: hotwirePoint ? 1 : 0.5 }}>
-        {t('mirrorGapText')}
-        <input type="number" value={mirrorGap} onChange={function(e) { setMirrorGap(Number(e.target.value)); }} disabled={!hotwirePoint} />
-        <input type="range" min="1" max="10" step="0.1" value={mirrorGap} onChange={function(e) { setMirrorGap(Number(e.target.value)); }} disabled={!hotwirePoint} />
-      </label>
+          <label style={{ opacity: hotwirePoint ? 1 : 0.5 }}>
+            <input type="checkbox" checked={mirrorWing} onChange={function(e) { 
+              if (hotwirePoint) setMirrorWing(e.target.checked); 
+            }} disabled={!hotwirePoint} />
+            {t('mirrorWing')}
+          </label>
 
-      <label style={{ opacity: hotwirePoint ? 1 : 0.5 }}>
-        <input type="checkbox" checked={machineEntryExit} onChange={function(e) { 
-          if (hotwirePoint) setMachineEntryExit(e.target.checked); 
-        }} disabled={!hotwirePoint} />
-        {t('machineEntryExit')}
-      </label>
+          <label style={{ opacity: hotwirePoint ? 1 : 0.5 }}>
+            {t('mirrorGapText')}
+            <input type="number" value={mirrorGap} onChange={function(e) { setMirrorGap(Number(e.target.value)); }} disabled={!hotwirePoint} />
+            <input type="range" min="1" max="10" step="0.1" value={mirrorGap} onChange={function(e) { setMirrorGap(Number(e.target.value)); }} disabled={!hotwirePoint} />
+          </label>
+
+          <label style={{ opacity: hotwirePoint ? 1 : 0.5 }}>
+            <input type="checkbox" checked={machineEntryExit} onChange={function(e) { 
+              if (hotwirePoint) setMachineEntryExit(e.target.checked); 
+            }} disabled={!hotwirePoint} />
+            {t('machineEntryExit')}
+          </label>
+        </div>
+      </div>
 
       <ProfileBox title={t('innerProfile')} color={innerColor} isActive={activeTab === 'inner'} onToggle={function() { 
         setActiveTab(activeTab === 'inner' ? null : 'inner');

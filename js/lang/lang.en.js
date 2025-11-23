@@ -5,6 +5,9 @@ window.langEN = {
   camera: "Camera",
   target: "Target",
 
+  languageSelection: "languageSelection",
+  hotwireOptions: "hotwireOptions",
+  wingParameters: "wingParameters",
   // --- Files ---
   innerDAT: "Root DAT",
   outerDAT: "Tip DAT",

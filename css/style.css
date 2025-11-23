@@ -1,55 +1,199 @@
-/* style.css */
+/* ==================== Basis ==================== */
+body {
+  margin: 0;
+  padding: 0;
+  font-family: Inter, Roboto, sans-serif;
+  background: #eaf3ea;
+  color: #1e1f1e;
 
-/* =========================
-   Obere Leiste für GitHub & Lizenz
-   ========================= */
-#top-bar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  background: linear-gradient(to right, #24292e, #2c3e50);
-  color: #fff;
-  padding: 8px 16px;
-  font-family: 'Segoe UI', Tahoma, sans-serif;
-  font-size: 14px;
-  font-weight: 500;
   display: flex;
-  justify-content: flex-start; /* linksbündig */
-  gap: 16px; /* Abstand zwischen Links */
-  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-  z-index: 1000;
-  transition: background 0.3s;
+  flex-direction: column;
+  height: 100vh;       /* Body füllt Höhe */
+  overflow: hidden;    /* Kein Scroll auf Body */
 }
 
-#top-bar a {
-  color: #ffffff;
+.app-root {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+/* ==================== Header ==================== */
+header {
+  display: flex;
+  flex-direction: column; /* Top-Bar + Nav */
+  flex-shrink: 0;         /* Höhe bleibt fix */
+  background: #f7f9f7;
+  border-bottom: 1px solid #cde0cd;
+  box-sizing: border-box;
+}
+
+/* Top-Bar innerhalb Header */
+#top-bar {
+  padding: 4px 16px;
+  font-size: 14px;
+  height: 20px;
+  line-height: 20px;
+}
+
+/* Navigation innerhalb Header */
+nav {
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+}
+
+nav a {
+  margin-right: 20px;
   text-decoration: none;
-  padding: 2px 6px;
+  font-weight: 500;
+  color: #2e3a32;
+}
+nav a:hover {
+  color: #ff7a32;
+}
+
+/* ==================== Theme Selector ==================== */
+.theme-selector {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: #ffffffcc;
+  backdrop-filter: blur(5px);
+  padding: 10px 16px;
+  border-radius: 12px;
+  box-shadow: 0 6px 15px rgba(0,0,0,0.12);
+}
+
+.theme-selector button {
+  margin-right: 6px;
+  padding: 5px 10px;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  background: #7ac66e33;
+}
+
+/* ==================== Container ==================== */
+.container {
+  display: flex;
+  flex: 1 1 auto;      /* füllt restliche Höhe unter Header */
+  gap: 12px;
+  padding: 12px 24px;
+  min-height: 0;       /* Wichtig für Flexbox-Scroll */
+  overflow: hidden;    /* Scroll nur in Settings */
+}
+
+/* ==================== Settings Panel ==================== */
+#settings {
+  flex: 0 0 300px;     /* Breite fix, z.B. 500px */
+  max-width: 80%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;       /* zwingend für Scroll */
+  overflow-y: auto;    /* Scrollbar aktivieren */
+  padding: 0 16px 16px 16px;
+  background: linear-gradient(160deg, #f4fff4, #f0f9f0);
+  border-radius: 16px;
+  border-left: 6px solid #7ac66e;
+  box-shadow: 0 6px 25px rgba(0,0,0,0.1);
+  position: relative;
+}
+
+.left-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+}
+
+#settings .resize-handle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 8px;
+  height: 100%;
+  cursor: ew-resize;
+  background: rgba(0,0,0,0.05);
+  border-top-right-radius: 16px;
+  border-bottom-right-radius: 16px;
+}
+
+/* ==================== Preview Panel ==================== */
+#preview {
+  flex: 1 1 auto;       /* Restliche Breite */
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: linear-gradient(160deg, #fff4f0, #f9fff4);
+  border-radius: 16px;
+  border-left: 6px solid #ff7a32;
+  padding: 0 16px 16px 16px;
+  box-shadow: 0 6px 25px rgba(0,0,0,0.1);
+}
+
+#preview-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  position: relative;
+}
+
+#canvas-container {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+}
+
+/* ==================== Tooltip ==================== */
+#tooltip {
+  position: absolute;
+  padding: 4px 6px;
+  background: #000;
+  color: #fff;
   border-radius: 4px;
-  transition: background 0.3s, color 0.3s;
+  pointer-events: none;
+  display: none;
+  font-size: 12px;
 }
 
-#top-bar a:hover {
-  background: rgba(255, 255, 255, 0.15);
-  color: #f0f0f0;
-}
-
+/* ==================== Profile Boxes ==================== */
 .profile-box {
-  border: 1px solid #aaa;
-  border-radius: 6px;
+  border: 1px solid #ccc;
+  border-radius: 12px;
   padding: 12px;
   margin-bottom: 12px;
-  background-color: #f9f9f9;
+  background: #fefefb;
 }
-
 .profile-header {
   font-weight: bold;
   cursor: pointer;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
   user-select: none;
+  color: #2e3a32;
 }
+.profile-content { padding: 6px 0; }
 
-.profile-content {
-  padding: 6px 0;
+label {
+  display: flex;
+  flex-direction: column;
+  font-size: 14px;
+  margin-bottom: 12px;
+  padding-left: 4px;
+}
+input[type="range"] { width: 100%; }
+input[type="number"] { max-width: 60px; }
+
+/* ==================== Footer ==================== */
+footer {
+  flex-shrink: 0;       /* Footer bleibt unten */
+  display: flex;
+  justify-content: flex-end;  /* Inhalt nach rechts */
+  align-items: center;
+  padding: 6px 16px;
+  font-size: 12px;
+  border-top: 1px solid #cde0cd;
+  background: #f7f9f7;
+  box-sizing: border-box;
 }

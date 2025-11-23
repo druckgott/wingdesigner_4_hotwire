@@ -5,6 +5,10 @@ window.langDE = {
   camera: "Kamera",
   target: "Ziel",
 
+  preview: "3D Vorschau",
+  languageSelection: "languageSelection",
+  hotwireOptions: "hotwireOptions",
+  wingParameters: "wingParameters",
   // --- Dateien ---
   innerDAT: "Wurzel-DAT",
   outerDAT: "Tip-DAT",
