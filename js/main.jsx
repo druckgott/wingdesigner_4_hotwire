@@ -1006,6 +1006,25 @@ useEffect(() => {
   };
 
   return (
+    <div className="app-root">   {/* <- Root-Wrapper */}
+    
+        
+          <div id="top-bar">
+        <span>🚀 Check out this project on </span>
+        <a href="https://github.com/druckgott/wingdesigner_4_hotwire" target="_blank">GitHub</a>
+        <span> | Licensed under </span>
+        <a href="https://github.com/druckgott/wingdesigner_4_hotwire/blob/main/LICENSE.md" target="_blank">MIT</a>
+        <span> | Feel free to <a href="https://github.com/druckgott/wingdesigner_4_hotwire" target="_blank">contribute!</a> 💡</span>
+        <span> | 💖 <a href="https://ko-fi.com/druckgott" target="_blank">Support via Ko-fi (Paypal...)</a></span>
+      </div>
+
+  <header>
+    <nav>
+      <a href="#">Home</a>
+      <a href="#">About</a>
+    </nav>
+  </header>
+
     <div className="container">
       <div className="panel" id="settings" style={{ flex: `0 0 ${settingsWidth}px` }}>
         <h2>Einstellungen</h2>
@@ -1089,7 +1108,7 @@ useEffect(() => {
 
         {/* Rechte Canvas-Box mit Tabs */}
          <div className="panel" id="preview">
-          <h2>3D Vorschau</h2>
+          <h2>Preview</h2>
           <div id="preview-content">
             {/* Canvas-Bereiche */}
             <div ref={canvasRef} id="canvas-container"></div>
@@ -1097,11 +1116,11 @@ useEffect(() => {
         </div>
         {/* Canvas-Box TooltiipRef */}
         <div ref={tooltipRef} id="tooltip"></div>
-      
-      {/* Footer mit Version */}
-      <footer>
-        Version: {version}
-      </footer>
+    </div>
+    {/* Footer mit Version */}
+    <footer>
+      Version: {version}
+    </footer>
     </div>
   );
 }
