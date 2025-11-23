@@ -187,13 +187,19 @@ window.LeftPanel = function LeftPanel(props) {
         </select>
       </label>
 
-      <div style={{ fontSize: 12, background: '#f7f7f7', padding: 8, border: '1px solid #ccc' }}>
+      {/*<div style={{ fontSize: 12, background: '#f7f7f7', padding: 8, border: '1px solid #ccc' }}>
         <b>{t('camera')}:</b> {cameraPosRef.current.x.toFixed(1)}, {cameraPosRef.current.y.toFixed(1)}, {cameraPosRef.current.z.toFixed(1)}<br/>
         <b>{t('target')}:</b> {cameraTargetRef.current.x.toFixed(1)}, {cameraTargetRef.current.y.toFixed(1)}, {cameraTargetRef.current.z.toFixed(1)}
-      </div>
+      </div>*/}
 
-      <label>{t('innerDAT')} <input type="file" accept=".dat" onChange={function(e) { handleFile(e, setInnerDAT, setInnerName); }} /> {innerName}</label>
-      <label>{t('outerDAT')} <input type="file" accept=".dat" onChange={function(e) { handleFile(e, setOuterDAT, setOuterName); }} /> {outerName}</label>
+      <label>{t('innerDAT')} 
+        <input type="file" accept=".dat" onChange={function(e) { handleFile(e, setInnerDAT, setInnerName); }} /> 
+        {innerName}
+        </label>
+      <label>{t('outerDAT')} 
+        <input type="file" accept=".dat" onChange={function(e) { handleFile(e, setOuterDAT, setOuterName); }} /> 
+        {outerName}
+        </label>
 
       <label>{t('span')} (mm)
         <input type="range" min="10" max="3000" value={span} onChange={function(e) { setSpan(Number(e.target.value)); }} />

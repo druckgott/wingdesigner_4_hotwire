@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <title>Hotwire Wing 3D Preview, WingDesigner 4 Hotwire – Web‑Tool zur Planung von Styropor‑Heissdraht‑Flügeln</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="css/style.css">
+
+</head>
+<body>
+
+  <header>
+    <nav>
+      <a href="#">Home</a>
+      <a href="#">About</a>
+    </nav>
+  </header>
+
+  
+  <div class="container">
+    <div class="panel" id="settings">
+      <h2>Einstellungen</h2>
+      <p>Hier werden alle Airfoil-Parameter angezeigt (Left Panel).</p>
+
+      <div class="profile-box">
+        <div class="profile-header">Sprachwahl</div>
+        <div class="profile-content">
+          <select>
+            <option>Deutsch</option>
+            <option>English</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="profile-box">
+        <div class="profile-header">Airfoil Dateien & Maße</div>
+        <div class="profile-content">
+          <label>Inner DAT: <input type="file" /></label>
+          <label>Outer DAT: <input type="file" /></label>
+          <label>Spannweite: <input type="range" /><input type="number" /></label>
+          <label>Punkte pro Profil: <input type="range" /><input type="number" /></label>
+        </div>
+      </div>
+
+      <div class="profile-box">
+        <div class="profile-header">Optionen</div>
+        <div class="profile-content">
+          <label><input type="checkbox" /> Oberfläche anzeigen</label>
+          <label><input type="checkbox" /> Gitter anzeigen</label>
+        </div>
+      </div>
+
+      <div class="resize-handle" id="resize-handle"></div>
+    </div>
+
+    <div class="panel" id="preview">
+      <h2>3D Vorschau</h2>
+      <div id="preview-content">
+        <p>Hier wird die 3D-Darstellung des Airfoils angezeigt (Right Panel).</p>
+      </div>
+    </div>
+  </div>
+
+  <footer>Version: 1.0.0</footer>
+  
+</body>
+</html>

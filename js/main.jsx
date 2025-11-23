@@ -100,12 +100,46 @@ function HotwireWing3D() {
   const [cameraPos, setCameraPos] = useState({x:0,y:0,z:0});
   const [cameraTarget, setCameraTarget] = useState({x:0,y:0,z:0});
 
+  // State für die Breite
+  const [settingsWidth, setSettingsWidth] = React.useState(300);
+  const isResizingRef = React.useRef(false);
+
   //Simulation
   const [simulateCut, setSimulateCut] = useState(false);
   const [speedMultiplier, setSpeedMultiplier] = useState(1);
   const [tailLengthSimu, setTailLengthSimu] = useState(50);
   const [trailLengthMax, setTrailLengthMax] = useState(50);
   
+  const handleMouseDown = (e) => {
+    isResizingRef.current = true;
+    document.body.style.cursor = "ew-resize";
+  };
+
+  const handleMouseMove = React.useCallback((e) => {
+    if (!isResizingRef.current) return;
+    let newWidth = e.clientX;
+    if (newWidth < 200) newWidth = 200;
+    if (newWidth > window.innerWidth - 200) newWidth = window.innerWidth - 200;
+    setSettingsWidth(newWidth);
+  }, []);
+
+  const handleMouseUp = () => {
+    if (isResizingRef.current) {
+      isResizingRef.current = false;
+      document.body.style.cursor = "default";
+    }
+  };
+
+  // global Listener mit useEffect für Maus
+  React.useEffect(() => {
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [handleMouseMove]);
+
   //Version Useffect
   useEffect(() => {
     fetch("commit.txt")
@@ -147,7 +181,8 @@ function HotwireWing3D() {
 
   // Szene
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0xf0f0f0);
+  //scene.background = new THREE.Color(0xf0f0f0);
+  scene.background = null; // macht den Hintergrund transparent
   sceneRef.current = scene;
 
   // Kamera
@@ -158,11 +193,13 @@ function HotwireWing3D() {
   cameraRef.current = camera;
 
   // Renderer
-  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   renderer.setSize(width, height);
+   renderer.setClearColor(0x000000, 0);
   canvasRef.current.innerHTML = "";
   canvasRef.current.appendChild(renderer.domElement);
   rendererRef.current = renderer;
+ 
 
   // OrbitControls
   const controls = new THREE.OrbitControls(camera, renderer.domElement);
@@ -969,9 +1006,9 @@ useEffect(() => {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: 12, height: 'calc(100vh - 60px)', boxSizing: 'border-box' }}>
-      <h2>Hotwire Wing 3D Preview</h2>
-      <div style={{ display: 'flex', gap: 12, flex: 1, minHeight: 0 }}>
+    <div className="container">
+      <div className="panel" id="settings" style={{ flex: `0 0 ${settingsWidth}px` }}>
+        <h2>Einstellungen</h2>
         {/* Left Canvas-Box */}
         <LeftPanel
           version={version}
@@ -1039,16 +1076,30 @@ useEffect(() => {
           tailLengthSimu={tailLengthSimu} setTailLengthSimu={setTailLengthSimu}
           trailLengthMax={trailLengthMax}
         />
+        {/* Resize Handle */}
+        <div className="resize-handle" onMouseDown={handleMouseDown} style={{ position: "absolute", top: 0,
+            right: 0,
+            width: 8,
+            height: "100%",
+            cursor: "ew-resize",
+            background: "rgba(0,0,0,0.05)",
+          }}
+        ></div>
+        </div>
+
         {/* Rechte Canvas-Box mit Tabs */}
-        <div style={{flex: 1, minHeight: 0, position: 'relative'}}>
-          {/* Canvas-Bereiche */}
-          <div ref={canvasRef} id="canvas-container" style={{width:'100%', height:'100%'}}></div>
+         <div className="panel" id="preview">
+          <h2>3D Vorschau</h2>
+          <div id="preview-content">
+            {/* Canvas-Bereiche */}
+            <div ref={canvasRef} id="canvas-container"></div>
+          </div>
         </div>
         {/* Canvas-Box TooltiipRef */}
-        <div ref={tooltipRef} style={{ position:'absolute', padding:'4px 6px', background:'#000', color:'#fff', borderRadius:4, pointerEvents:'none', display:'none', fontSize:12 }}></div>
-      </div>
+        <div ref={tooltipRef} id="tooltip"></div>
+      
       {/* Footer mit Version */}
-      <footer style={{ position: "fixed", bottom: 6, right: 8, fontSize: 12, color: "#666" }}>
+      <footer>
         Version: {version}
       </footer>
     </div>
