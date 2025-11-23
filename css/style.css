@@ -3,10 +3,10 @@ body {
   font-family: Inter, Roboto, sans-serif;
   background: #eaf3ea;
   color: #1e1f1e;
-  height: 100vh;
+  height: 100vh;          /* Viewport-Höhe */
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: hidden;       /* verhindert Scroll der Seite */
 }
 
 header {
@@ -44,27 +44,35 @@ nav a:hover { color: #ff7a32; }
 
 .container {
   display: flex;
-  flex: 1;
+  flex: 1;                 /* füllt Body-Höhe aus */
   gap: 12px;
   padding: 12px 24px;
-  box-sizing: border-box;
-  min-height: 0;
-  overflow: hidden;
+  min-height: 0;           /* wichtig für Flexbox-Scroll */
+  overflow: hidden;        /* kein Scroll für Container, nur für Settings */
+  height: calc(100vh - 120px);
 }
 
 #settings {
-  flex: 0 0 300px;
+  flex: 0 0 300px;               /* Breite anpassen, z.B. 500px */
   max-width: 80%;
   background: linear-gradient(160deg, #f4fff4, #f0f9f0);
   border-radius: 16px;
   border-left: 6px solid #7ac66e;
   position: relative;
   display: flex;
-  flex-direction: column;
+  flex-direction: column;       /* Flexbox wichtig für Scroll */
   transition: flex-basis 0.2s ease;
-  padding: 0px 16px 16px 16px; /* oben etwas höher */
+  padding: 0px 16px 16px 16px;
   box-shadow: 0 6px 25px rgba(0,0,0,0.1);
-  overflow-y: auto;
+  min-height: 0;           /* wichtig für Scroll in Flexbox */
+  overflow-y: auto;        /* Scrollbar aktivieren */
+}
+
+.left-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;           /* zwingend, sonst Scroll nicht möglich */
 }
 
 #settings .resize-handle {
@@ -142,10 +150,53 @@ label {
 input[type="range"] { width: 100%; }
 input[type="number"] { max-width: 60px; }
 
+#top-bar {
+  padding: 4px 16px;
+  font-size: 14px;
+  height: 20px;
+}
+
+header {
+  height: 40px;                /* feste Höhe */
+  line-height: 40px;           /* vertikale Zentrierung für Links */
+  padding: 0 16px;             /* horizontaler Abstand */
+  border-bottom: 1px solid #cde0cd;
+  background: #f7f9f7;
+  box-sizing: border-box;      /* wichtig, damit padding in Höhe eingerechnet wird */
+  flex-shrink: 0;              /* nicht zusammenschrumpfen */
+  display: flex;
+  align-items: center;
+}
+
 footer {
   position: fixed;
   bottom: 6px;
   right: 12px;
   font-size: 12px;
   color: #666;
+}
+
+#top-bar { background: rgba(255,0,0,0.3); }
+#settings { background: rgba(0,255,0,0.3); }
+#preview { background: rgba(0,0,255,0.2); }
+footer { background: rgba(255, 0, 255, 0.25); }
+.container {
+  background: rgba(255, 200, 0, 0.25); /* Gelb durchsichtig */
+}
+
+
+/* Panel links */
+#settings {
+  background: rgba(0, 255, 0, 0.25); /* Grün */
+}
+
+/* Panel rechts */
+#preview {
+  background: rgba(0, 0, 255, 0.25); /* Blau */
+}
+
+/* Footer */
+footer {
+  background: rgba(255, 0, 255, 0.25); /* Magenta */
+  border: 2px solid red;               /* Sichtbarer Rahmen */
 }
